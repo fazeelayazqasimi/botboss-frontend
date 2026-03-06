@@ -12,18 +12,24 @@ const Landing = () => {
     totalJobs: 0,
     totalCompanies: 0,
     activeCandidates: 0,
-    placements: 0
+    placements: 0,
+    cities: 0
   });
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [topCompanies, setTopCompanies] = useState([]);
 
   useEffect(() => {
+    // Initialize localStorage with EMPTY data (no dummy data)
     initializeLocalStorage();
+
+    // Get stats (will be zero initially)
     setStats(getStats());
 
+    // Get jobs from localStorage (empty initially)
     const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
     setFeaturedJobs(jobs.slice(0, 6));
 
+    // Get companies from localStorage (empty initially)
     const companies = JSON.parse(localStorage.getItem('companies') || '[]');
     setTopCompanies(companies.slice(0, 4));
   }, []);
@@ -462,7 +468,7 @@ const Landing = () => {
           <div style={styles.heroContent}>
             <span style={styles.heroBadge}>🚀 AI-POWERED HIRING PLATFORM</span>
             <h1 style={styles.heroTitle}>
-              Transform Your Hiring with{' '}
+              Transform Your Hiring with us{' '}
               <span style={styles.highlight}>Intelligent Interviews</span>
             </h1>
             <p style={styles.heroText}>

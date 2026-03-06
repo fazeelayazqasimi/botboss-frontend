@@ -32,7 +32,7 @@ const Interview = () => {
   const timerRef = useRef(null);
   const eyeCheckRef = useRef(null);
   
-  const API_URL = 'http://localhost:8000';
+  const API_URL = 'https://Fazeelayazq-botboss-backend.hf.space';
 
   useEffect(() => {
     // Check user login

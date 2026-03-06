@@ -1,4 +1,4 @@
-// Mock data for localStorage
+// Mock data for localStorage - Available but not auto-loaded
 
 // Jobs Data
 export const mockJobs = [
@@ -478,40 +478,109 @@ export const mockUsers = [
   }
 ];
 
-// Initialize localStorage with mock data
-export const initializeLocalStorage = () => {
-  if (!localStorage.getItem('jobs')) {
-    localStorage.setItem('jobs', JSON.stringify(mockJobs));
-  }
-  if (!localStorage.getItem('companies')) {
-    localStorage.setItem('companies', JSON.stringify(mockCompanies));
-  }
-  if (!localStorage.getItem('candidates')) {
-    localStorage.setItem('candidates', JSON.stringify(mockCandidates));
-  }
-  if (!localStorage.getItem('users')) {
-    localStorage.setItem('users', JSON.stringify(mockUsers));
-  }
-  if (!localStorage.getItem('applications')) {
-    localStorage.setItem('applications', JSON.stringify(mockApplications));
-  }
-  if (!localStorage.getItem('interviews')) {
-    localStorage.setItem('interviews', JSON.stringify(mockInterviews));
-  }
+// ==============================================
+// IMPORTANT: INITIALIZATION FUNCTIONS
+// ==============================================
+
+/**
+ * Initialize localStorage with EMPTY data (NO DUMMY DATA)
+ * Call this function only if you want to reset everything
+ */
+export const initializeEmptyStorage = () => {
+  localStorage.setItem('jobs', JSON.stringify([]));
+  localStorage.setItem('companies', JSON.stringify([]));
+  localStorage.setItem('candidates', JSON.stringify([]));
+  localStorage.setItem('users', JSON.stringify([]));
+  localStorage.setItem('applications', JSON.stringify([]));
+  localStorage.setItem('interviews', JSON.stringify([]));
+  console.log('✅ LocalStorage initialized with empty data');
 };
 
-// Get stats for landing page
+/**
+ * Initialize localStorage with DUMMY DATA (for testing only)
+ * Call this function only when you need demo data
+ */
+export const initializeDummyData = () => {
+  localStorage.setItem('jobs', JSON.stringify(mockJobs));
+  localStorage.setItem('companies', JSON.stringify(mockCompanies));
+  localStorage.setItem('candidates', JSON.stringify(mockCandidates));
+  localStorage.setItem('users', JSON.stringify(mockUsers));
+  localStorage.setItem('applications', JSON.stringify(mockApplications));
+  localStorage.setItem('interviews', JSON.stringify(mockInterviews));
+  console.log('✅ LocalStorage initialized with DUMMY data');
+};
+
+/**
+ * Initialize localStorage with default setup (EMPTY by default)
+ * This is what your app will use in production
+ */
+export const initializeLocalStorage = () => {
+  // In production, we want EMPTY storage
+  // Users will create their own data via signup/login
+  
+  // Only initialize users array (for signup)
+  if (!localStorage.getItem('users')) {
+    localStorage.setItem('users', JSON.stringify([]));
+  }
+  
+  // Initialize other stores as empty if they don't exist
+  if (!localStorage.getItem('jobs')) {
+    localStorage.setItem('jobs', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('companies')) {
+    localStorage.setItem('companies', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('candidates')) {
+    localStorage.setItem('candidates', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('applications')) {
+    localStorage.setItem('applications', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('interviews')) {
+    localStorage.setItem('interviews', JSON.stringify([]));
+  }
+  
+  console.log('✅ LocalStorage initialized (empty - ready for real data)');
+};
+
+/**
+ * Clear all localStorage data
+ */
+export const clearAllData = () => {
+  localStorage.clear();
+  console.log('🗑️ All localStorage data cleared');
+};
+
+/**
+ * Get stats for landing page
+ */
 export const getStats = () => {
   const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
   const companies = JSON.parse(localStorage.getItem('companies') || '[]');
   const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
+  const applications = JSON.parse(localStorage.getItem('applications') || '[]');
   
   return {
     totalJobs: jobs.length,
-    activeJobs: jobs.filter(job => job.active).length,
+    activeJobs: jobs.filter(job => job.active !== false).length,
     totalCompanies: companies.length,
     activeCandidates: candidates.length,
-    placements: Math.floor(jobs.length * 0.7),
-    cities: [...new Set(jobs.map(job => job.location.split(' ')[0]))].length
+    placements: applications.filter(a => a.status === 'Hired').length,
+    cities: [...new Set(jobs.map(job => job.location?.split(' ')[0] || ''))].filter(Boolean).length
   };
+};
+
+// Export all mock data for use in other files
+export default {
+  mockJobs,
+  mockCompanies,
+  mockCandidates,
+  mockApplications,
+  mockInterviews,
+  mockUsers,
+  initializeEmptyStorage,
+  initializeDummyData,
+  initializeLocalStorage,
+  clearAllData,
+  getStats
 };

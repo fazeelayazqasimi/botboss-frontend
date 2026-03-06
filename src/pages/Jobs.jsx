@@ -17,6 +17,7 @@ const Jobs = () => {
   });
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [companies, setCompanies] = useState([]);
 
   useEffect(() => {
     loadJobs();
@@ -27,12 +28,40 @@ const Jobs = () => {
   }, [filters, jobs]);
 
   const loadJobs = () => {
-    const jobsData = JSON.parse(localStorage.getItem('jobs') || '[]');
-    setJobs(jobsData);
-    setFilteredJobs(jobsData);
+    // Get companies first to verify real companies
+    const companiesData = JSON.parse(localStorage.getItem('companies') || '[]');
+    setCompanies(companiesData);
     
-    const uniqueLocations = [...new Set(jobsData.map(job => job.location.split(' ')[0]))];
-    const uniqueCategories = [...new Set(jobsData.map(job => job.category))];
+    // Get all jobs from localStorage
+    const allJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+    console.log('All jobs from storage:', allJobs);
+    
+    // Filter jobs to show ONLY those that belong to REAL companies
+    // Either by companyId matching OR company name matching
+    const realJobs = allJobs.filter(job => {
+      // Check if job belongs to a company that exists
+      const belongsToCompany = companiesData.some(company => 
+        company.id === job.companyId || 
+        company.name === job.company ||
+        company.email === job.companyEmail
+      );
+      
+      // Also check if job was posted by a logged-in company
+      // (job has valid companyId)
+      const hasValidCompanyId = job.companyId && job.companyId > 0;
+      
+      return belongsToCompany || hasValidCompanyId;
+    });
+    
+    console.log('Real jobs (only from companies):', realJobs);
+    
+    setJobs(realJobs);
+    setFilteredJobs(realJobs);
+    
+    // Extract unique locations and categories from real jobs only
+    const uniqueLocations = [...new Set(realJobs.map(job => job.location?.split(' ')[0] || ''))].filter(Boolean);
+    const uniqueCategories = [...new Set(realJobs.map(job => job.category || ''))].filter(Boolean);
+    
     setLocations(uniqueLocations);
     setCategories(uniqueCategories);
     
@@ -44,15 +73,15 @@ const Jobs = () => {
 
     if (filters.search) {
       filtered = filtered.filter(job => 
-        job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.company.toLowerCase().includes(filters.search.toLowerCase()) ||
-        job.description.toLowerCase().includes(filters.search.toLowerCase())
+        job.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.company?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        job.description?.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
     if (filters.location) {
       filtered = filtered.filter(job => 
-        job.location.includes(filters.location)
+        job.location?.includes(filters.location)
       );
     }
 
@@ -66,7 +95,10 @@ const Jobs = () => {
 
     if (filters.salary) {
       filtered = filtered.filter(job => {
+        if (!job.salary) return false;
         const salaryNum = parseInt(job.salary.replace(/[^0-9]/g, ''));
+        if (isNaN(salaryNum)) return false;
+        
         switch(filters.salary) {
           case '0-10': return salaryNum < 10;
           case '10-20': return salaryNum >= 10 && salaryNum < 20;
@@ -97,6 +129,12 @@ const Jobs = () => {
     });
   };
 
+  // Manual refresh function
+  const refreshJobs = () => {
+    setLoading(true);
+    loadJobs();
+  };
+
   const styles = {
     container: {
       minHeight: '100vh',
@@ -117,7 +155,8 @@ const Jobs = () => {
       padding: '3rem 5%',
       textAlign: 'center',
       marginBottom: '2rem',
-      borderRadius: '10px'
+      borderRadius: '10px',
+      position: 'relative'
     },
     heroTitle: {
       fontSize: '2.5rem',
@@ -128,6 +167,21 @@ const Jobs = () => {
       opacity: 0.9,
       maxWidth: '600px',
       margin: '0 auto'
+    },
+    refreshBtn: {
+      position: 'absolute',
+      top: '1rem',
+      right: '1rem',
+      padding: '0.5rem 1rem',
+      background: 'rgba(255,255,255,0.2)',
+      border: '1px solid white',
+      borderRadius: '5px',
+      color: 'white',
+      cursor: 'pointer',
+      fontSize: '0.9rem',
+      ':hover': {
+        background: 'rgba(255,255,255,0.3)'
+      }
     },
     content: {
       maxWidth: '1400px',
@@ -201,7 +255,9 @@ const Jobs = () => {
       alignItems: 'center',
       marginBottom: '1.5rem',
       paddingBottom: '1rem',
-      borderBottom: '1px solid #e5e7eb'
+      borderBottom: '1px solid #e5e7eb',
+      flexWrap: 'wrap',
+      gap: '1rem'
     },
     resultsCount: {
       color: '#4b5563',
@@ -228,10 +284,23 @@ const Jobs = () => {
       padding: '3rem',
       color: '#666'
     },
+    noJobsIcon: {
+      fontSize: '3rem',
+      marginBottom: '1rem',
+      opacity: 0.5
+    },
     loading: {
       textAlign: 'center',
       padding: '3rem',
       color: '#667eea'
+    },
+    infoMessage: {
+      background: '#e3f2fd',
+      color: '#1976d2',
+      padding: '1rem',
+      borderRadius: '5px',
+      marginBottom: '1rem',
+      textAlign: 'center'
     }
   };
 
@@ -250,8 +319,11 @@ const Jobs = () => {
       <Navbar />
       
       <div style={styles.hero}>
+        <button onClick={refreshJobs} style={styles.refreshBtn}>
+          🔄 Refresh Jobs
+        </button>
         <h1 style={styles.heroTitle}>Find Your Dream Job</h1>
-        <p style={styles.heroText}>Browse through thousands of job opportunities from top companies</p>
+        <p style={styles.heroText}>Browse through job opportunities from top companies</p>
       </div>
 
       <div style={styles.content}>
@@ -340,7 +412,7 @@ const Jobs = () => {
         <main style={styles.mainContent}>
           <div style={styles.resultsHeader}>
             <div style={styles.resultsCount}>
-              Showing <span style={styles.resultsCountStrong}>{filteredJobs.length}</span> jobs
+              Showing <span style={styles.resultsCountStrong}>{filteredJobs.length}</span> jobs from real companies
             </div>
             <select style={styles.sortSelect}>
               <option>Most Relevant</option>
@@ -358,8 +430,19 @@ const Jobs = () => {
             </div>
           ) : (
             <div style={styles.noJobs}>
-              <h3>No jobs found</h3>
-              <p>Try adjusting your filters or search criteria</p>
+              <div style={styles.noJobsIcon}>🏢</div>
+              <h3>No jobs available yet</h3>
+              <p>Companies haven't posted any jobs yet.</p>
+              <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#999'}}>
+                When companies post jobs, they will appear here.
+              </p>
+            </div>
+          )}
+          
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={styles.infoMessage}>
+              <small>Debug: {jobs.length} jobs loaded from localStorage</small>
             </div>
           )}
         </main>
