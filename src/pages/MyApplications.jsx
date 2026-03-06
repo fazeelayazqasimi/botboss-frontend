@@ -7,15 +7,15 @@ const MyApplications = () => {
   const [user, setUser] = useState(null);
   const [candidate, setCandidate] = useState(null);
   const [applications, setApplications] = useState([]);
-  const [jobs, setJobs] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const navigate = useNavigate();
 
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
   useEffect(() => {
-    // Check if user is logged in and is candidate
     const userData = JSON.parse(localStorage.getItem('user'));
     if (!userData || userData.type !== 'candidate') {
       navigate('/login');
@@ -23,11 +23,10 @@ const MyApplications = () => {
     }
     setUser(userData);
     loadCandidateData(userData);
-  }, []);
+  }, [navigate]);
 
-  const loadCandidateData = (userData) => {
+  const loadCandidateData = async (userData) => {
     try {
-      // Get candidate profile
       const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
       const candidateProfile = candidates.find(c => 
         c.userId === userData.id || 
@@ -36,11 +35,6 @@ const MyApplications = () => {
       );
       setCandidate(candidateProfile);
 
-      // Get all jobs
-      const allJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-      setJobs(allJobs);
-
-      // Get applications for this candidate
       const allApplications = JSON.parse(localStorage.getItem('applications') || '[]');
       const myApplications = allApplications.filter(app => 
         app.candidateId === candidateProfile?.id || 
@@ -49,15 +43,13 @@ const MyApplications = () => {
       );
       setApplications(myApplications);
 
-      // Get interviews for this candidate
       const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
       const myInterviews = allInterviews.filter(interview => 
         myApplications.some(app => app.id === interview.applicationId)
       );
       setInterviews(myInterviews);
 
-      // Load reports from backend for completed interviews
-      loadReportsFromBackend(myInterviews);
+      await loadReportsFromBackend(myInterviews);
 
     } catch (error) {
       console.error('Error loading candidate data:', error);
@@ -67,7 +59,6 @@ const MyApplications = () => {
   };
 
   const loadReportsFromBackend = async (myInterviews) => {
-    const API_URL = 'http://localhost:8000';
     const completedInterviews = myInterviews.filter(i => i.status === 'Completed');
     
     const reportPromises = completedInterviews.map(async (interview) => {
@@ -220,20 +211,12 @@ const MyApplications = () => {
       fontSize: '0.9rem',
       fontWeight: 500,
       transition: 'all 0.3s',
-      whiteSpace: 'nowrap',
-      ':hover': {
-        borderColor: '#667eea',
-        color: '#667eea'
-      }
+      whiteSpace: 'nowrap'
     },
     activeFilter: {
       background: '#667eea',
       color: 'white',
-      borderColor: '#667eea',
-      ':hover': {
-        background: '#764ba2',
-        color: 'white'
-      }
+      borderColor: '#667eea'
     },
     applicationsList: {
       display: 'flex',
@@ -245,11 +228,7 @@ const MyApplications = () => {
       borderRadius: '12px',
       padding: '1.5rem',
       boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      transition: 'transform 0.3s, boxShadow 0.3s',
-      ':hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: '0 5px 20px rgba(0,0,0,0.15)'
-      }
+      transition: 'transform 0.3s, boxShadow 0.3s'
     },
     cardHeader: {
       display: 'flex',
@@ -266,10 +245,7 @@ const MyApplications = () => {
       fontSize: '1.3rem',
       color: '#333',
       marginBottom: '0.25rem',
-      textDecoration: 'none',
-      ':hover': {
-        color: '#667eea'
-      }
+      textDecoration: 'none'
     },
     companyName: {
       color: '#667eea',
@@ -374,41 +350,24 @@ const MyApplications = () => {
     },
     btnPrimary: {
       background: '#667eea',
-      color: 'white',
-      ':hover': {
-        background: '#764ba2',
-        transform: 'translateY(-2px)'
-      }
+      color: 'white'
     },
     btnSuccess: {
       background: '#4caf50',
-      color: 'white',
-      ':hover': {
-        background: '#45a049'
-      }
+      color: 'white'
     },
     btnWarning: {
       background: '#ff9800',
-      color: 'white',
-      ':hover': {
-        background: '#f57c00'
-      }
+      color: 'white'
     },
     btnPurple: {
       background: '#9c27b0',
-      color: 'white',
-      ':hover': {
-        background: '#7b1fa2'
-      }
+      color: 'white'
     },
     btnOutline: {
       background: 'transparent',
       border: '1px solid #667eea',
-      color: '#667eea',
-      ':hover': {
-        background: '#667eea',
-        color: 'white'
-      }
+      color: '#667eea'
     },
     emptyState: {
       textAlign: 'center',
@@ -438,12 +397,7 @@ const MyApplications = () => {
       color: 'white',
       textDecoration: 'none',
       borderRadius: '8px',
-      fontWeight: 500,
-      transition: 'all 0.3s',
-      ':hover': {
-        background: '#764ba2',
-        transform: 'translateY(-2px)'
-      }
+      fontWeight: 500
     },
     loading: {
       textAlign: 'center',
@@ -470,13 +424,11 @@ const MyApplications = () => {
       <Navbar />
       
       <main style={styles.main}>
-        {/* Header */}
         <div style={styles.header}>
           <h1 style={styles.welcome}>My Applications</h1>
           <p style={styles.subtitle}>Track your job applications and interview status</p>
         </div>
 
-        {/* Stats Cards */}
         <div style={styles.statsGrid}>
           <div style={styles.statCard}>
             <div style={{...styles.statIcon, background: '#e3f2fd'}}>📋</div>
@@ -522,7 +474,6 @@ const MyApplications = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div style={styles.filtersContainer}>
           <button 
             style={{...styles.filterBtn, ...(activeFilter === 'all' ? styles.activeFilter : {})}}
@@ -574,7 +525,6 @@ const MyApplications = () => {
           </button>
         </div>
 
-        {/* Applications List */}
         {filteredApplications.length > 0 ? (
           <div style={styles.applicationsList}>
             {filteredApplications.map(app => {
@@ -583,7 +533,6 @@ const MyApplications = () => {
               
               return (
                 <div key={app.id} style={styles.applicationCard}>
-                  {/* Header */}
                   <div style={styles.cardHeader}>
                     <div style={styles.jobInfo}>
                       <Link to={`/job/${app.jobId}`} style={styles.jobTitle}>
@@ -600,7 +549,6 @@ const MyApplications = () => {
                     </span>
                   </div>
 
-                  {/* Details */}
                   <div style={styles.cardDetails}>
                     <div style={styles.detailItem}>
                       <span>📅</span>
@@ -614,7 +562,6 @@ const MyApplications = () => {
                     )}
                   </div>
 
-                  {/* Interview Section */}
                   {interview && (
                     <div style={styles.interviewSection}>
                       <div style={styles.interviewHeader}>
@@ -642,7 +589,6 @@ const MyApplications = () => {
                         </div>
                       </div>
 
-                      {/* Report Preview */}
                       {report && (
                         <div style={styles.reportPreview}>
                           <div style={styles.scoreRow}>
@@ -666,7 +612,6 @@ const MyApplications = () => {
                         </div>
                       )}
 
-                      {/* Action Buttons */}
                       <div style={styles.actionButtons}>
                         {app.status === 'Shortlisted' && (
                           <Link 
@@ -706,7 +651,6 @@ const MyApplications = () => {
                     </div>
                   )}
 
-                  {/* No Interview Yet */}
                   {!interview && app.status !== 'Rejected' && app.status !== 'Hired' && (
                     <div style={styles.actionButtons}>
                       <Link 

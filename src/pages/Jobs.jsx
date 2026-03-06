@@ -31,7 +31,6 @@ const Jobs = () => {
     setJobs(jobsData);
     setFilteredJobs(jobsData);
     
-    // Extract unique locations and categories for filters
     const uniqueLocations = [...new Set(jobsData.map(job => job.location.split(' ')[0]))];
     const uniqueCategories = [...new Set(jobsData.map(job => job.category))];
     setLocations(uniqueLocations);
@@ -43,7 +42,6 @@ const Jobs = () => {
   const applyFilters = () => {
     let filtered = [...jobs];
 
-    // Search filter
     if (filters.search) {
       filtered = filtered.filter(job => 
         job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -52,24 +50,20 @@ const Jobs = () => {
       );
     }
 
-    // Location filter
     if (filters.location) {
       filtered = filtered.filter(job => 
         job.location.includes(filters.location)
       );
     }
 
-    // Job type filter
     if (filters.type) {
       filtered = filtered.filter(job => job.type === filters.type);
     }
 
-    // Category filter
     if (filters.category) {
       filtered = filtered.filter(job => job.category === filters.category);
     }
 
-    // Salary filter (simplified)
     if (filters.salary) {
       filtered = filtered.filter(job => {
         const salaryNum = parseInt(job.salary.replace(/[^0-9]/g, ''));
@@ -107,17 +101,23 @@ const Jobs = () => {
     container: {
       minHeight: '100vh',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      background: '#f8f9fa'
     },
     main: {
       flex: 1,
-      background: '#f8f9fa'
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem 5%',
+      width: '100%'
     },
     hero: {
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       color: 'white',
       padding: '3rem 5%',
-      textAlign: 'center'
+      textAlign: 'center',
+      marginBottom: '2rem',
+      borderRadius: '10px'
     },
     heroTitle: {
       fontSize: '2.5rem',
@@ -132,13 +132,9 @@ const Jobs = () => {
     content: {
       maxWidth: '1400px',
       margin: '0 auto',
-      padding: '2rem 5%',
       display: 'grid',
       gridTemplateColumns: '300px 1fr',
-      gap: '2rem',
-      '@media (max-width: 768px)': {
-        gridTemplateColumns: '1fr'
-      }
+      gap: '2rem'
     },
     sidebar: {
       background: 'white',
@@ -170,10 +166,7 @@ const Jobs = () => {
       border: '1px solid #e5e7eb',
       borderRadius: '5px',
       fontSize: '0.95rem',
-      outline: 'none',
-      ':focus': {
-        borderColor: '#667eea'
-      }
+      outline: 'none'
     },
     filterSelect: {
       width: '100%',
@@ -194,11 +187,7 @@ const Jobs = () => {
       cursor: 'pointer',
       fontSize: '0.9rem',
       fontWeight: 500,
-      transition: 'all 0.3s',
-      marginTop: '1rem',
-      ':hover': {
-        background: '#e5e7eb'
-      }
+      marginTop: '1rem'
     },
     mainContent: {
       background: 'white',
@@ -243,9 +232,6 @@ const Jobs = () => {
       textAlign: 'center',
       padding: '3rem',
       color: '#667eea'
-    },
-    searchBox: {
-      marginBottom: '1.5rem'
     }
   };
 
@@ -269,7 +255,6 @@ const Jobs = () => {
       </div>
 
       <div style={styles.content}>
-        {/* Sidebar Filters */}
         <aside style={styles.sidebar}>
           <h3 style={styles.sidebarTitle}>Filters</h3>
           
@@ -352,7 +337,6 @@ const Jobs = () => {
           </button>
         </aside>
 
-        {/* Main Content */}
         <main style={styles.mainContent}>
           <div style={styles.resultsHeader}>
             <div style={styles.resultsCount}>

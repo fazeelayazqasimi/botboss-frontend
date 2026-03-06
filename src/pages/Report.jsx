@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 const Report = () => {
   const { sessionId } = useParams();
-  const navigate = useNavigate();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const API_URL = 'http://localhost:8000';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     fetchReport();
@@ -131,17 +130,7 @@ const Report = () => {
       fontSize: '0.9rem',
       display: 'flex',
       alignItems: 'center',
-      gap: '0.5rem',
-      ':hover': {
-        background: '#e5e7eb'
-      }
-    },
-    summaryCard: {
-      background: 'white',
-      borderRadius: '12px',
-      padding: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      marginBottom: '2rem'
+      gap: '0.5rem'
     },
     overallScore: {
       textAlign: 'center',
@@ -251,10 +240,7 @@ const Report = () => {
       borderRadius: '10px',
       padding: '1.25rem',
       marginBottom: '1rem',
-      transition: 'all 0.3s',
-      ':hover': {
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-      }
+      transition: 'all 0.3s'
     },
     questionHeader: {
       display: 'flex',
@@ -336,20 +322,12 @@ const Report = () => {
       transition: 'all 0.3s',
       border: 'none',
       cursor: 'pointer',
-      fontSize: '1rem',
-      ':hover': {
-        background: '#764ba2',
-        transform: 'translateY(-2px)'
-      }
+      fontSize: '1rem'
     },
     secondaryBtn: {
       background: 'transparent',
       color: '#667eea',
-      border: '2px solid #667eea',
-      ':hover': {
-        background: '#667eea',
-        color: 'white'
-      }
+      border: '2px solid #667eea'
     },
     loading: {
       textAlign: 'center',
@@ -377,14 +355,6 @@ const Report = () => {
       borderRadius: '5px',
       cursor: 'pointer',
       fontSize: '1rem'
-    },
-    statsRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '1rem',
-      flexWrap: 'wrap',
-      gap: '1rem'
     }
   };
 
@@ -434,7 +404,6 @@ const Report = () => {
       <Navbar />
       
       <main style={styles.main}>
-        {/* Header with Session ID */}
         <div style={styles.header}>
           <div style={styles.headerLeft}>
             <h1 style={styles.title}>Interview Report</h1>
@@ -450,7 +419,6 @@ const Report = () => {
           </button>
         </div>
 
-        {/* Overall Score */}
         <div style={styles.overallScore}>
           <div style={styles.overallValue}>
             {getScoreEmoji(report.overall_score)} {report.overall_score}%
@@ -464,7 +432,6 @@ const Report = () => {
           </div>
         </div>
 
-        {/* Score Grid */}
         <div style={styles.scoreGrid}>
           <div style={styles.scoreCard}>
             <div style={{...styles.scoreValue, color: getScoreColor(report.eye_contact_score || 0)}}>
@@ -500,7 +467,6 @@ const Report = () => {
           </div>
         </div>
 
-        {/* Summary */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>
             <span>📋</span> Interview Summary
@@ -508,7 +474,6 @@ const Report = () => {
           <p style={styles.summary}>{report.summary || 'No summary available'}</p>
         </div>
 
-        {/* Strengths & Weaknesses */}
         <div style={styles.strengthsWeaknesses}>
           <div style={styles.strengthBox}>
             <h3 style={{...styles.boxTitle, color: '#2e7d32'}}>
@@ -544,7 +509,6 @@ const Report = () => {
           </div>
         </div>
 
-        {/* Question Analysis */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>
             <span>❓</span> Question Analysis
@@ -595,7 +559,6 @@ const Report = () => {
           )}
         </div>
 
-        {/* Actions */}
         <div style={styles.actions}>
           <Link to="/my-applications" style={{...styles.actionBtn, ...styles.secondaryBtn, textDecoration: 'none'}}>
             Back to Applications
