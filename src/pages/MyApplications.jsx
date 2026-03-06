@@ -17,10 +17,7 @@ const MyApplications = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'candidate') {
-      navigate('/login');
-      return;
-    }
+    if (!userData || userData.type !== 'candidate') { navigate('/login'); return; }
     setUser(userData);
     loadCandidateData(userData);
   }, [navigate]);
@@ -28,661 +25,629 @@ const MyApplications = () => {
   const loadCandidateData = async (userData) => {
     try {
       const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
-      const candidateProfile = candidates.find(c => 
-        c.userId === userData.id || 
-        c.email === userData.email ||
-        c.name === userData.name
+      const candidateProfile = candidates.find(c =>
+        c.userId === userData.id || c.email === userData.email || c.name === userData.name
       );
       setCandidate(candidateProfile);
-
       const allApplications = JSON.parse(localStorage.getItem('applications') || '[]');
-      const myApplications = allApplications.filter(app => 
-        app.candidateId === candidateProfile?.id || 
+      const myApplications = allApplications.filter(app =>
+        app.candidateId === candidateProfile?.id ||
         app.candidateName === userData.name ||
         app.candidateEmail === userData.email
       );
       setApplications(myApplications);
-
       const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
-      const myInterviews = allInterviews.filter(interview => 
-        myApplications.some(app => app.id === interview.applicationId)
-      );
+      const myInterviews = allInterviews.filter(i => myApplications.some(a => a.id === i.applicationId));
       setInterviews(myInterviews);
-
       await loadReportsFromBackend(myInterviews);
-
-    } catch (error) {
-      console.error('Error loading candidate data:', error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   const loadReportsFromBackend = async (myInterviews) => {
-    const completedInterviews = myInterviews.filter(i => i.status === 'Completed');
-    
-    const reportPromises = completedInterviews.map(async (interview) => {
-      try {
-        const response = await fetch(`${API_URL}/interview/report/${interview.id}`);
-        if (response.ok) {
-          const report = await response.json();
-          return { interviewId: interview.id, report };
-        }
-      } catch (error) {
-        console.error('Error loading report:', error);
-      }
-      return null;
-    });
-
-    const results = await Promise.all(reportPromises);
-    const validReports = results.filter(r => r !== null);
-    setReports(validReports);
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Applied': return { bg: '#ff980020', color: '#ff9800' };
-      case 'Under Review': return { bg: '#2196f320', color: '#2196f3' };
-      case 'Shortlisted': return { bg: '#4caf5020', color: '#4caf50' };
-      case 'Interview Scheduled': return { bg: '#9c27b020', color: '#9c27b0' };
-      case 'Interview Completed': return { bg: '#673ab720', color: '#673ab7' };
-      case 'Rejected': return { bg: '#f4433620', color: '#f44336' };
-      case 'Hired': return { bg: '#2e7d3220', color: '#2e7d32' };
-      default: return { bg: '#75757520', color: '#757575' };
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'Applied': return '📝';
-      case 'Under Review': return '🔍';
-      case 'Shortlisted': return '⭐';
-      case 'Interview Scheduled': return '📅';
-      case 'Interview Completed': return '✅';
-      case 'Rejected': return '❌';
-      case 'Hired': return '🎉';
-      default: return '📋';
-    }
-  };
-
-  const getInterviewForApplication = (applicationId) => {
-    return interviews.find(i => i.applicationId === applicationId);
-  };
-
-  const getReportForInterview = (interviewId) => {
-    const reportData = reports.find(r => r.interviewId === interviewId);
-    return reportData?.report;
-  };
-
-  const filteredApplications = activeFilter === 'all' 
-    ? applications 
-    : applications.filter(app => {
-        const status = app.status.toLowerCase().replace(/ /g, '-');
-        return status === activeFilter;
-      });
-
-  const stats = {
-    total: applications.length,
-    active: applications.filter(a => !['Rejected', 'Hired', 'Interview Completed'].includes(a.status)).length,
-    shortlisted: applications.filter(a => a.status === 'Shortlisted').length,
-    interviews: interviews.length,
-    completed: applications.filter(a => a.status === 'Interview Completed').length,
-    offers: applications.filter(a => a.status === 'Hired').length
-  };
-
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#f8f9fa'
-    },
-    main: {
-      flex: 1,
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '2rem 5%',
-      width: '100%'
-    },
-    header: {
-      marginBottom: '2rem'
-    },
-    welcome: {
-      fontSize: '2rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    subtitle: {
-      fontSize: '1.1rem',
-      color: '#666'
-    },
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-      gap: '1.5rem',
-      marginBottom: '2rem'
-    },
-    statCard: {
-      background: 'white',
-      padding: '1.5rem',
-      borderRadius: '12px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem'
-    },
-    statIcon: {
-      width: '50px',
-      height: '50px',
-      borderRadius: '10px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '1.8rem'
-    },
-    statInfo: {
-      flex: 1
-    },
-    statValue: {
-      fontSize: '1.8rem',
-      fontWeight: 'bold',
-      color: '#333',
-      lineHeight: 1.2
-    },
-    statLabel: {
-      color: '#666',
-      fontSize: '0.9rem'
-    },
-    filtersContainer: {
-      display: 'flex',
-      gap: '0.5rem',
-      marginBottom: '2rem',
-      flexWrap: 'wrap',
-      overflowX: 'auto',
-      paddingBottom: '0.5rem'
-    },
-    filterBtn: {
-      padding: '0.5rem 1.25rem',
-      borderRadius: '30px',
-      border: '1px solid #e5e7eb',
-      background: 'white',
-      color: '#666',
-      cursor: 'pointer',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      transition: 'all 0.3s',
-      whiteSpace: 'nowrap'
-    },
-    activeFilter: {
-      background: '#667eea',
-      color: 'white',
-      borderColor: '#667eea'
-    },
-    applicationsList: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.5rem'
-    },
-    applicationCard: {
-      background: 'white',
-      borderRadius: '12px',
-      padding: '1.5rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      transition: 'transform 0.3s, boxShadow 0.3s'
-    },
-    cardHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: '1rem',
-      flexWrap: 'wrap',
-      gap: '1rem'
-    },
-    jobInfo: {
-      flex: 1
-    },
-    jobTitle: {
-      fontSize: '1.3rem',
-      color: '#333',
-      marginBottom: '0.25rem',
-      textDecoration: 'none'
-    },
-    companyName: {
-      color: '#667eea',
-      fontSize: '1rem',
-      marginBottom: '0.5rem'
-    },
-    statusBadge: {
-      padding: '0.5rem 1rem',
-      borderRadius: '30px',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    cardDetails: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '1rem',
-      marginBottom: '1rem',
-      padding: '1rem 0',
-      borderTop: '1px solid #e5e7eb',
-      borderBottom: '1px solid #e5e7eb'
-    },
-    detailItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      color: '#666',
-      fontSize: '0.95rem'
-    },
-    interviewSection: {
-      background: '#f3f4f6',
-      borderRadius: '10px',
-      padding: '1rem',
-      marginTop: '1rem'
-    },
-    interviewHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '0.75rem'
-    },
-    interviewTitle: {
-      fontSize: '1rem',
-      color: '#333',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    interviewDetails: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '1.5rem',
-      marginBottom: '1rem'
-    },
-    interviewItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      color: '#666',
-      fontSize: '0.95rem'
-    },
-    reportPreview: {
-      background: 'white',
-      borderRadius: '8px',
-      padding: '1rem',
-      marginTop: '0.75rem'
-    },
-    scoreRow: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      marginBottom: '0.75rem',
-      flexWrap: 'wrap'
-    },
-    scoreBadge: {
-      padding: '0.25rem 0.75rem',
-      borderRadius: '20px',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      display: 'inline-block'
-    },
-    actionButtons: {
-      display: 'flex',
-      gap: '0.75rem',
-      marginTop: '1rem',
-      flexWrap: 'wrap'
-    },
-    btn: {
-      padding: '0.5rem 1.25rem',
-      borderRadius: '6px',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      textDecoration: 'none',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      border: 'none'
-    },
-    btnPrimary: {
-      background: '#667eea',
-      color: 'white'
-    },
-    btnSuccess: {
-      background: '#4caf50',
-      color: 'white'
-    },
-    btnWarning: {
-      background: '#ff9800',
-      color: 'white'
-    },
-    btnPurple: {
-      background: '#9c27b0',
-      color: 'white'
-    },
-    btnOutline: {
-      background: 'transparent',
-      border: '1px solid #667eea',
-      color: '#667eea'
-    },
-    emptyState: {
-      textAlign: 'center',
-      padding: '4rem 2rem',
-      background: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    emptyIcon: {
-      fontSize: '4rem',
-      marginBottom: '1rem',
-      opacity: 0.5
-    },
-    emptyTitle: {
-      fontSize: '1.5rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    emptyText: {
-      color: '#666',
-      marginBottom: '2rem'
-    },
-    browseJobsBtn: {
-      display: 'inline-block',
-      padding: '0.75rem 2rem',
-      background: '#667eea',
-      color: 'white',
-      textDecoration: 'none',
-      borderRadius: '8px',
-      fontWeight: 500
-    },
-    loading: {
-      textAlign: 'center',
-      padding: '3rem',
-      color: '#667eea'
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={styles.container}>
-        <Navbar />
-        <div style={styles.loading}>
-          <div style={{fontSize: '2rem', marginBottom: '1rem'}}>⏳</div>
-          <h3>Loading your applications...</h3>
-        </div>
-        <Footer />
-      </div>
+    const results = await Promise.all(
+      myInterviews.filter(i => i.status === 'Completed').map(async (iv) => {
+        try {
+          const res = await fetch(`${API_URL}/interview/report/${iv.id}`);
+          if (res.ok) return { interviewId: iv.id, report: await res.json() };
+        } catch (_) {}
+        return null;
+      })
     );
-  }
+    setReports(results.filter(Boolean));
+  };
 
+  const STATUS_CFG = {
+    'Applied':             { bg: '#fff7ed', color: '#ea580c', border: '#fed7aa', bar: '#f97316' },
+    'Under Review':        { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', bar: '#3b82f6' },
+    'Shortlisted':         { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', bar: '#22c55e' },
+    'Interview Scheduled': { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', bar: '#8b5cf6' },
+    'Interview Completed': { bg: '#fdf4ff', color: '#a21caf', border: '#f0abfc', bar: '#c026d3' },
+    'Rejected':            { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', bar: '#ef4444' },
+    'Hired':               { bg: '#f0fdf4', color: '#15803d', border: '#86efac', bar: '#22c55e' },
+  };
+  const cfg = (s) => STATUS_CFG[s] || { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', bar: '#9ca3af' };
+
+  const STATUS_ICONS = {
+    'Applied':             <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    'Under Review':        <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    'Shortlisted':         <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    'Interview Scheduled': <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    'Interview Completed': <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+    'Rejected':            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+    'Hired':               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  };
+
+  const getInterview = (appId) => interviews.find(i => i.applicationId === appId);
+  const getReport = (ivId) => reports.find(r => r.interviewId === ivId)?.report;
+
+  const FILTER_TABS = [
+    { key: 'all', label: 'All' },
+    { key: 'applied', label: 'Applied' },
+    { key: 'under-review', label: 'Review' },
+    { key: 'shortlisted', label: 'Shortlisted' },
+    { key: 'interview-scheduled', label: 'Scheduled' },
+    { key: 'interview-completed', label: 'Completed' },
+    { key: 'rejected', label: 'Rejected' },
+    { key: 'hired', label: 'Hired' },
+  ];
+
+  const tabCount = (key) => {
+    if (key === 'all') return applications.length;
+    const map = { 'applied':'Applied','under-review':'Under Review','shortlisted':'Shortlisted','interview-scheduled':'Interview Scheduled','interview-completed':'Interview Completed','rejected':'Rejected','hired':'Hired' };
+    return applications.filter(a => a.status === map[key]).length;
+  };
+
+  const filtered = activeFilter === 'all'
+    ? applications
+    : applications.filter(a => a.status.toLowerCase().replace(/ /g, '-') === activeFilter);
+
+  const STATS = [
+    { label: 'Total',       val: applications.length,                                                            color: '#7c3aed', bg: '#f5f3ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+    { label: 'Active',      val: applications.filter(a => !['Rejected','Hired','Interview Completed'].includes(a.status)).length, color: '#2563eb', bg: '#eff6ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+    { label: 'Shortlisted', val: applications.filter(a => a.status === 'Shortlisted').length,                   color: '#16a34a', bg: '#f0fdf4', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+    { label: 'Interviews',  val: interviews.length,                                                              color: '#7c3aed', bg: '#f5f3ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
+    { label: 'Completed',   val: applications.filter(a => a.status === 'Interview Completed').length,           color: '#a21caf', bg: '#fdf4ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg> },
+    { label: 'Offers',      val: applications.filter(a => a.status === 'Hired').length,                        color: '#15803d', bg: '#f0fdf4', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+  ];
+
+  /* ─────────── RENDER ─────────── */
   return (
-    <div style={styles.container}>
-      <Navbar />
-      
-      <main style={styles.main}>
-        <div style={styles.header}>
-          <h1 style={styles.welcome}>My Applications</h1>
-          <p style={styles.subtitle}>Track your job applications and interview status</p>
-        </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        <div style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#e3f2fd'}}>📋</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.total}</div>
-              <div style={styles.statLabel}>Total</div>
-            </div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#fff3e0'}}>⏳</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.active}</div>
-              <div style={styles.statLabel}>Active</div>
-            </div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#e8f5e8'}}>⭐</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.shortlisted}</div>
-              <div style={styles.statLabel}>Shortlisted</div>
-            </div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#f3e5f5'}}>🎥</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.interviews}</div>
-              <div style={styles.statLabel}>Interviews</div>
-            </div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#e8f5e8'}}>✅</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.completed}</div>
-              <div style={styles.statLabel}>Completed</div>
-            </div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={{...styles.statIcon, background: '#fff3e0'}}>🎉</div>
-            <div style={styles.statInfo}>
-              <div style={styles.statValue}>{stats.offers}</div>
-              <div style={styles.statLabel}>Offers</div>
-            </div>
-          </div>
-        </div>
+        .ma-root {
+          font-family: 'Poppins', sans-serif;
+          background: #f8f7ff;
+          min-height: 100vh;
+          color: #1c0b4b;
+          -webkit-font-smoothing: antialiased;
+        }
 
-        <div style={styles.filtersContainer}>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'all' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('all')}
-          >
-            All ({stats.total})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'applied' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('applied')}
-          >
-            Applied ({applications.filter(a => a.status === 'Applied').length})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'under-review' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('under-review')}
-          >
-            Under Review ({applications.filter(a => a.status === 'Under Review').length})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'shortlisted' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('shortlisted')}
-          >
-            Shortlisted ({stats.shortlisted})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'interview-scheduled' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('interview-scheduled')}
-          >
-            Interview Scheduled ({applications.filter(a => a.status === 'Interview Scheduled').length})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'interview-completed' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('interview-completed')}
-          >
-            Completed ({stats.completed})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'rejected' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('rejected')}
-          >
-            Rejected ({applications.filter(a => a.status === 'Rejected').length})
-          </button>
-          <button 
-            style={{...styles.filterBtn, ...(activeFilter === 'hired' ? styles.activeFilter : {})}}
-            onClick={() => setActiveFilter('hired')}
-          >
-            Hired ({stats.offers})
-          </button>
-        </div>
+        /* ──────────── LOADING ──────────── */
+        .ma-loader {
+          min-height: 60vh;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 1rem; color: #9ca3af; font-size: .9rem;
+        }
+        .ma-spinner {
+          width: 40px; height: 40px;
+          border: 3px solid #ede9fe; border-top-color: #7c3aed;
+          border-radius: 50%; animation: ma-spin .8s linear infinite;
+        }
+        @keyframes ma-spin { to { transform: rotate(360deg); } }
 
-        {filteredApplications.length > 0 ? (
-          <div style={styles.applicationsList}>
-            {filteredApplications.map(app => {
-              const interview = getInterviewForApplication(app.id);
-              const report = interview ? getReportForInterview(interview.id) : null;
-              
-              return (
-                <div key={app.id} style={styles.applicationCard}>
-                  <div style={styles.cardHeader}>
-                    <div style={styles.jobInfo}>
-                      <Link to={`/job/${app.jobId}`} style={styles.jobTitle}>
-                        {app.jobTitle}
-                      </Link>
-                      <div style={styles.companyName}>{app.company}</div>
-                    </div>
-                    <span style={{
-                      ...styles.statusBadge,
-                      background: getStatusColor(app.status).bg,
-                      color: getStatusColor(app.status).color
-                    }}>
-                      {getStatusIcon(app.status)} {app.status}
-                    </span>
-                  </div>
+        /* ──────────── HERO ──────────── */
+        .ma-hero {
+          background: #1c0b4b;
+          padding: 2.75rem 5% 2.25rem;
+          position: relative; overflow: hidden;
+        }
+        .ma-hero::before {
+          content:''; position:absolute; top:-140px; right:-140px;
+          width:420px; height:420px;
+          background: radial-gradient(circle,rgba(124,58,237,.22) 0%,transparent 65%);
+          pointer-events:none;
+        }
+        .ma-hero-inner { max-width:1300px; margin:0 auto; position:relative; z-index:1; }
+        .ma-hero-tag {
+          font-size:.72rem; font-weight:600; letter-spacing:.12em;
+          text-transform:uppercase; color:#a78bfa; margin-bottom:.45rem;
+        }
+        .ma-hero-title {
+          font-size: clamp(1.4rem,3vw,2rem); font-weight:800;
+          color:white; letter-spacing:-.03em; line-height:1.2; margin-bottom:.35rem;
+        }
+        .ma-hero-title span { color:#a78bfa; font-weight:400; }
+        .ma-hero-sub { font-size:.875rem; color:#9ca3af; }
 
-                  <div style={styles.cardDetails}>
-                    <div style={styles.detailItem}>
-                      <span>📅</span>
-                      <span>Applied: {new Date(app.appliedDate).toLocaleDateString()}</span>
-                    </div>
-                    {app.score && (
-                      <div style={styles.detailItem}>
-                        <span>📊</span>
-                        <span>Score: {app.score}%</span>
-                      </div>
-                    )}
-                  </div>
+        /* ──────────── MAIN ──────────── */
+        .ma-main { max-width:1300px; margin:0 auto; padding:1.75rem 5%; }
 
-                  {interview && (
-                    <div style={styles.interviewSection}>
-                      <div style={styles.interviewHeader}>
-                        <div style={styles.interviewTitle}>
-                          <span>🎥</span>
-                          <strong>Interview Details</strong>
-                        </div>
-                        <span style={{
-                          ...styles.scoreBadge,
-                          background: interview.status === 'Completed' ? '#4caf5020' : '#ff980020',
-                          color: interview.status === 'Completed' ? '#4caf50' : '#ff9800'
-                        }}>
-                          {interview.status}
-                        </span>
-                      </div>
-                      
-                      <div style={styles.interviewDetails}>
-                        <div style={styles.interviewItem}>
-                          <span>📅</span>
-                          <span>Date: {new Date(interview.scheduledDate).toLocaleDateString()}</span>
-                        </div>
-                        <div style={styles.interviewItem}>
-                          <span>⏰</span>
-                          <span>Time: {new Date(interview.scheduledDate).toLocaleTimeString()}</span>
-                        </div>
-                      </div>
+        /* ──────────── STATS ──────────── */
+        .ma-stats {
+          display: grid;
+          grid-template-columns: repeat(6,1fr);
+          gap:.875rem;
+          margin-bottom:1.75rem;
+        }
+        .ma-stat {
+          background:white; border:1.5px solid #f3f4f6;
+          border-radius:14px; padding:1.1rem 1rem;
+          display:flex; flex-direction:column; gap:.45rem;
+          transition:all .2s; cursor:default;
+        }
+        .ma-stat:hover { border-color:#ddd6fe; box-shadow:0 4px 16px rgba(124,58,237,.08); }
+        .ma-stat-icon {
+          width:34px; height:34px; border-radius:9px;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .ma-stat-icon svg { width:17px; height:17px; stroke:currentColor; fill:none; }
+        .ma-stat-val { font-size:1.55rem; font-weight:800; color:#1c0b4b; letter-spacing:-.03em; line-height:1; }
+        .ma-stat-lbl { font-size:.7rem; color:#9ca3af; font-weight:500; }
 
-                      {report && (
-                        <div style={styles.reportPreview}>
-                          <div style={styles.scoreRow}>
-                            <span style={{
-                              ...styles.scoreBadge,
-                              background: '#4caf5020',
-                              color: '#4caf50'
-                            }}>
-                              Overall: {report.overall_score}%
-                            </span>
-                            <span style={{color: '#666'}}>
-                              👁️ {report.eye_contact_score}%
-                            </span>
-                            <span style={{color: '#666'}}>
-                              💪 {report.confidence_score}%
-                            </span>
-                            <span style={{color: '#666'}}>
-                              🎯 {report.clarity_score}%
-                            </span>
-                          </div>
-                        </div>
-                      )}
+        /* ──────────── FILTER TABS ──────────── */
+        .ma-tabs {
+          display:flex; gap:.375rem;
+          overflow-x:auto; padding-bottom:.25rem;
+          margin-bottom:1.5rem;
+          scrollbar-width:none; -ms-overflow-style:none;
+        }
+        .ma-tabs::-webkit-scrollbar { display:none; }
+        .ma-tab {
+          display:inline-flex; align-items:center; gap:.35rem;
+          padding:.45rem .9rem;
+          border:1.5px solid #f3f4f6; border-radius:100px;
+          background:white; font-family:'Poppins',sans-serif;
+          font-size:.76rem; font-weight:600; color:#6b7280;
+          cursor:pointer; transition:all .18s; white-space:nowrap; flex-shrink:0;
+        }
+        .ma-tab:hover { border-color:#c4b5fd; color:#7c3aed; }
+        .ma-tab.on { background:#7c3aed; color:white; border-color:#7c3aed; }
+        .ma-tab-n {
+          font-size:.65rem; font-weight:700;
+          background:rgba(0,0,0,.1); padding:.08rem .38rem; border-radius:100px;
+        }
+        .ma-tab.on .ma-tab-n { background:rgba(255,255,255,.25); }
 
-                      <div style={styles.actionButtons}>
-                        {app.status === 'Shortlisted' && (
-                          <Link 
-                            to={`/interview/${app.jobId}`}
-                            state={{ applicationId: app.id, jobTitle: app.jobTitle }}
-                            style={{...styles.btn, ...styles.btnSuccess}}
-                          >
-                            🎥 Give Interview
-                          </Link>
-                        )}
-                        
-                        {interview && interview.status === 'Scheduled' && (
-                          <Link 
-                            to={`/interview/${app.jobId}`}
-                            style={{...styles.btn, ...styles.btnWarning}}
-                          >
-                            📅 Join Interview
-                          </Link>
-                        )}
-                        
-                        {report && (
-                          <Link 
-                            to={`/report/${interview?.id || app.sessionId}`}
-                            style={{...styles.btn, ...styles.btnPurple}}
-                          >
-                            📊 View Full Report
-                          </Link>
-                        )}
-                        
-                        <Link 
-                          to={`/job/${app.jobId}`}
-                          style={{...styles.btn, ...styles.btnOutline}}
-                        >
-                          View Job
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+        /* ──────────── APPLICATION CARD ──────────── */
+        .ma-list { display:flex; flex-direction:column; gap:1.1rem; }
 
-                  {!interview && app.status !== 'Rejected' && app.status !== 'Hired' && (
-                    <div style={styles.actionButtons}>
-                      <Link 
-                        to={`/job/${app.jobId}`}
-                        style={{...styles.btn, ...styles.btnOutline}}
-                      >
-                        View Job Details
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        .ma-card {
+          background:white; border:1.5px solid #f3f4f6;
+          border-radius:18px; overflow:hidden;
+          transition:all .22s;
+        }
+        .ma-card:hover { border-color:#ddd6fe; box-shadow:0 6px 24px rgba(124,58,237,.08); }
+
+        /* top colour bar */
+        .ma-card-bar { height:3.5px; }
+
+        .ma-card-body { padding:1.4rem 1.5rem; }
+
+        /* card header */
+        .ma-ch {
+          display:flex; justify-content:space-between;
+          align-items:flex-start; gap:.875rem; margin-bottom:.9rem;
+        }
+        .ma-ch-left { flex:1; min-width:0; }
+        .ma-job-link {
+          font-size:.975rem; font-weight:700; color:#1c0b4b;
+          text-decoration:none; display:block;
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+          margin-bottom:.2rem;
+          transition:color .18s;
+        }
+        .ma-job-link:hover { color:#7c3aed; }
+        .ma-company { font-size:.8rem; font-weight:600; color:#7c3aed; }
+
+        /* status badge */
+        .ma-badge {
+          display:inline-flex; align-items:center; gap:.35rem;
+          font-size:.7rem; font-weight:700;
+          padding:.32rem .8rem; border-radius:100px;
+          border:1.5px solid; white-space:nowrap; flex-shrink:0;
+        }
+        .ma-badge svg { width:11px; height:11px; stroke:currentColor; fill:none; flex-shrink:0; }
+
+        /* meta chips row */
+        .ma-meta { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.9rem; }
+        .ma-chip {
+          display:inline-flex; align-items:center; gap:.28rem;
+          font-size:.73rem; font-weight:500; color:#6b7280;
+          background:#f9fafb; border:1px solid #f3f4f6;
+          padding:.25rem .6rem; border-radius:7px;
+        }
+        .ma-chip svg { width:11px; height:11px; stroke:#9ca3af; fill:none; flex-shrink:0; }
+
+        /* score bar */
+        .ma-scorebar { margin-bottom:.9rem; }
+        .ma-scorebar-top {
+          display:flex; justify-content:space-between;
+          font-size:.7rem; font-weight:600; color:#6b7280; margin-bottom:.28rem;
+        }
+        .ma-scorebar-bg { height:5px; background:#f3f4f6; border-radius:3px; overflow:hidden; }
+        .ma-scorebar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+
+        /* ──────────── INTERVIEW BLOCK ──────────── */
+        .ma-iv {
+          background:#f8f7ff; border:1.5px solid #ede9fe;
+          border-radius:14px; padding:1rem 1.1rem; margin-bottom:.9rem;
+        }
+        .ma-iv-head {
+          display:flex; justify-content:space-between;
+          align-items:center; gap:.5rem; margin-bottom:.75rem;
+        }
+        .ma-iv-title {
+          display:flex; align-items:center; gap:.375rem;
+          font-size:.82rem; font-weight:700; color:#1c0b4b;
+        }
+        .ma-iv-title svg { width:14px; height:14px; stroke:#7c3aed; fill:none; }
+        .ma-iv-status {
+          font-size:.68rem; font-weight:700;
+          padding:.2rem .6rem; border-radius:100px; border:1.5px solid;
+        }
+        .ma-iv-meta { display:flex; flex-wrap:wrap; gap:.75rem; }
+        .ma-iv-item {
+          display:flex; align-items:center; gap:.3rem;
+          font-size:.76rem; font-weight:500; color:#6b7280;
+        }
+        .ma-iv-item svg { width:12px; height:12px; stroke:#a78bfa; fill:none; flex-shrink:0; }
+
+        /* report scores */
+        .ma-report {
+          background:white; border:1px solid #f3f4f6;
+          border-radius:10px; padding:.8rem 1rem; margin-top:.75rem;
+        }
+        .ma-rscores { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; }
+        .ma-rs {
+          text-align:center; background:#f9fafb;
+          border-radius:8px; padding:.45rem .25rem;
+        }
+        .ma-rs-val { font-size:.95rem; font-weight:800; color:#1c0b4b; letter-spacing:-.02em; }
+        .ma-rs-lbl { font-size:.6rem; color:#9ca3af; font-weight:500; margin-top:.1rem; }
+
+        /* ──────────── ACTION BUTTONS ──────────── */
+        .ma-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
+        .ma-btn {
+          display:inline-flex; align-items:center; gap:.3rem;
+          font-family:'Poppins',sans-serif;
+          font-size:.76rem; font-weight:600;
+          padding:.46rem .9rem; border-radius:9px;
+          text-decoration:none; cursor:pointer; border:none;
+          transition:all .18s; white-space:nowrap;
+        }
+        .ma-btn svg { width:12px; height:12px; stroke:currentColor; fill:none; flex-shrink:0; }
+        .ma-btn-primary   { background:#7c3aed; color:white; }
+        .ma-btn-primary:hover { background:#6d28d9; }
+        .ma-btn-green     { background:#16a34a; color:white; }
+        .ma-btn-green:hover { background:#15803d; }
+        .ma-btn-orange    { background:#ea580c; color:white; }
+        .ma-btn-orange:hover { background:#c2410c; }
+        .ma-btn-purple    { background:#a21caf; color:white; }
+        .ma-btn-purple:hover { background:#86198f; }
+        .ma-btn-outline   { background:white; color:#7c3aed; border:1.5px solid #ede9fe; }
+        .ma-btn-outline:hover { background:#f5f3ff; border-color:#7c3aed; }
+
+        /* ──────────── EMPTY STATE ──────────── */
+        .ma-empty {
+          background:white; border:1.5px solid #f3f4f6;
+          border-radius:20px; padding:4rem 2rem; text-align:center;
+        }
+        .ma-empty-icon {
+          width:72px; height:72px; background:#f5f3ff;
+          border-radius:20px; display:flex; align-items:center; justify-content:center;
+          margin:0 auto 1.4rem;
+        }
+        .ma-empty-icon svg { width:32px; height:32px; stroke:#c4b5fd; fill:none; }
+        .ma-empty h2 { font-size:1.1rem; font-weight:700; color:#1c0b4b; margin-bottom:.4rem; }
+        .ma-empty p { font-size:.84rem; color:#9ca3af; line-height:1.65; max-width:340px; margin:0 auto 1.5rem; }
+        .ma-browse {
+          display:inline-flex; align-items:center; gap:.4rem;
+          font-family:'Poppins',sans-serif; font-size:.875rem; font-weight:700;
+          background:#7c3aed; color:white;
+          padding:.75rem 1.75rem; border-radius:12px;
+          text-decoration:none; transition:all .2s;
+        }
+        .ma-browse:hover { background:#6d28d9; transform:translateY(-1px); box-shadow:0 8px 20px rgba(124,58,237,.3); }
+        .ma-browse svg { width:14px; height:14px; stroke:currentColor; fill:none; }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════ */
+
+        /* Tablet: 1024px */
+        @media (max-width:1024px) {
+          .ma-stats { grid-template-columns:repeat(3,1fr); }
+        }
+
+        /* Mobile: 768px */
+        @media (max-width:768px) {
+          .ma-hero { padding:2rem 1.25rem 1.75rem; }
+          .ma-main { padding:1.25rem; }
+
+          .ma-stats {
+            grid-template-columns:repeat(3,1fr);
+            gap:.625rem;
+            margin-bottom:1.25rem;
+          }
+          .ma-stat { padding:.875rem .75rem; gap:.375rem; border-radius:12px; }
+          .ma-stat-icon { width:30px; height:30px; border-radius:8px; }
+          .ma-stat-icon svg { width:14px; height:14px; }
+          .ma-stat-val { font-size:1.3rem; }
+          .ma-stat-lbl { font-size:.65rem; }
+
+          /* Card header stacks on mobile */
+          .ma-ch { flex-direction:column; gap:.5rem; }
+          .ma-badge { align-self:flex-start; }
+          .ma-job-link { white-space:normal; font-size:.9rem; }
+
+          .ma-card-body { padding:1.1rem; }
+          .ma-iv { padding:.875rem; }
+
+          .ma-rscores { grid-template-columns:repeat(2,1fr); gap:.375rem; }
+
+          /* Buttons stack */
+          .ma-actions { flex-direction:column; gap:.4rem; }
+          .ma-btn { width:100%; justify-content:center; padding:.6rem 1rem; font-size:.8rem; }
+        }
+
+        /* Small Mobile: 480px */
+        @media (max-width:480px) {
+          .ma-hero-title { font-size:1.3rem; }
+          .ma-hero-sub { font-size:.8rem; }
+
+          /* Show only 4 stats on very small screens */
+          .ma-stats {
+            grid-template-columns:repeat(2,1fr);
+            gap:.5rem;
+          }
+          .ma-stat:nth-child(5),
+          .ma-stat:nth-child(6) { display:none; }
+
+          .ma-tab { padding:.38rem .75rem; font-size:.72rem; }
+
+          .ma-card { border-radius:14px; }
+          .ma-card-body { padding:.875rem; }
+          .ma-card-bar { height:3px; }
+
+          .ma-job-link { font-size:.875rem; }
+          .ma-company { font-size:.75rem; }
+          .ma-badge { font-size:.65rem; padding:.25rem .65rem; }
+
+          .ma-chip { font-size:.7rem; padding:.2rem .5rem; }
+
+          .ma-iv { padding:.75rem; border-radius:12px; }
+          .ma-iv-title { font-size:.78rem; }
+
+          .ma-rscores { grid-template-columns:repeat(2,1fr); }
+          .ma-rs-val { font-size:.875rem; }
+          .ma-rs-lbl { font-size:.58rem; }
+
+          .ma-empty { padding:2.5rem 1rem; border-radius:16px; }
+          .ma-empty-icon { width:58px; height:58px; border-radius:14px; }
+          .ma-empty-icon svg { width:26px; height:26px; }
+          .ma-empty h2 { font-size:1rem; }
+        }
+
+        /* Very small: 360px */
+        @media (max-width:360px) {
+          .ma-main { padding:1rem .875rem; }
+          .ma-card-body { padding:.75rem; }
+          .ma-stat-val { font-size:1.15rem; }
+        }
+      `}</style>
+
+      <div className="ma-root">
+        <Navbar />
+
+        {loading ? (
+          <div className="ma-loader">
+            <div className="ma-spinner" />
+            <p>Loading your applications...</p>
           </div>
         ) : (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>📭</div>
-            <h2 style={styles.emptyTitle}>No applications yet</h2>
-            <p style={styles.emptyText}>
-              {activeFilter === 'all' 
-                ? "You haven't applied to any jobs yet. Start exploring and apply to your dream job!"
-                : `No applications with status "${activeFilter.replace('-', ' ')}" found.`}
-            </p>
-            <Link to="/jobs" style={styles.browseJobsBtn}>
-              Browse Jobs
-            </Link>
-          </div>
-        )}
-      </main>
+          <>
+            {/* ── HERO ── */}
+            <section className="ma-hero">
+              <div className="ma-hero-inner">
+                <p className="ma-hero-tag">Dashboard</p>
+                <h1 className="ma-hero-title">
+                  My Applications
+                  {user && <span> — {user.name?.split(' ')[0]}</span>}
+                </h1>
+                <p className="ma-hero-sub">Track your job applications and interview progress</p>
+              </div>
+            </section>
 
-      <Footer />
-    </div>
+            <main className="ma-main">
+
+              {/* ── STATS ── */}
+              <div className="ma-stats">
+                {STATS.map((s, i) => (
+                  <div key={i} className="ma-stat">
+                    <div className="ma-stat-icon" style={{ background: s.bg, color: s.color }}>
+                      {s.icon}
+                    </div>
+                    <div className="ma-stat-val">{s.val}</div>
+                    <div className="ma-stat-lbl">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── FILTER TABS ── */}
+              <div className="ma-tabs">
+                {FILTER_TABS.map(t => (
+                  <button
+                    key={t.key}
+                    className={`ma-tab ${activeFilter === t.key ? 'on' : ''}`}
+                    onClick={() => setActiveFilter(t.key)}
+                  >
+                    {t.label}
+                    <span className="ma-tab-n">{tabCount(t.key)}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* ── APPLICATION LIST ── */}
+              {filtered.length > 0 ? (
+                <div className="ma-list">
+                  {filtered.map(app => {
+                    const sc = cfg(app.status);
+                    const iv = getInterview(app.id);
+                    const rp = iv ? getReport(iv.id) : null;
+
+                    return (
+                      <div key={app.id} className="ma-card">
+                        <div className="ma-card-bar" style={{ background: sc.bar }} />
+
+                        <div className="ma-card-body">
+                          {/* Header */}
+                          <div className="ma-ch">
+                            <div className="ma-ch-left">
+                              <Link to={`/job/${app.jobId}`} className="ma-job-link">{app.jobTitle}</Link>
+                              <div className="ma-company">{app.company}</div>
+                            </div>
+                            <span className="ma-badge" style={{ background: sc.bg, color: sc.color, borderColor: sc.border }}>
+                              {STATUS_ICONS[app.status]}
+                              {app.status}
+                            </span>
+                          </div>
+
+                          {/* Meta */}
+                          <div className="ma-meta">
+                            <span className="ma-chip">
+                              <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                              {new Date(app.appliedDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                            </span>
+                            {app.score && (
+                              <span className="ma-chip">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                Score: {app.score}%
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Score bar */}
+                          {app.score && (
+                            <div className="ma-scorebar">
+                              <div className="ma-scorebar-top">
+                                <span>Interview Score</span>
+                                <span style={{ color: sc.color }}>{app.score}%</span>
+                              </div>
+                              <div className="ma-scorebar-bg">
+                                <div className="ma-scorebar-fill" style={{ width:`${app.score}%`, background: sc.bar }} />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Interview block */}
+                          {iv && (
+                            <div className="ma-iv">
+                              <div className="ma-iv-head">
+                                <div className="ma-iv-title">
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                                  Interview Details
+                                </div>
+                                <span className="ma-iv-status" style={{
+                                  background: iv.status === 'Completed' ? '#f0fdf4' : '#fff7ed',
+                                  color:      iv.status === 'Completed' ? '#16a34a' : '#ea580c',
+                                  borderColor:iv.status === 'Completed' ? '#bbf7d0' : '#fed7aa',
+                                }}>
+                                  {iv.status}
+                                </span>
+                              </div>
+                              <div className="ma-iv-meta">
+                                <span className="ma-iv-item">
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                  {new Date(iv.scheduledDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                                </span>
+                                <span className="ma-iv-item">
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                  {new Date(iv.scheduledDate).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+                                </span>
+                              </div>
+
+                              {/* Report scores */}
+                              {rp && (
+                                <div className="ma-report">
+                                  <div className="ma-rscores">
+                                    {[['Overall', rp.overall_score],['Eye Contact', rp.eye_contact_score],['Confidence', rp.confidence_score],['Clarity', rp.clarity_score]].map(([lbl, val], i) => (
+                                      <div key={i} className="ma-rs">
+                                        <div className="ma-rs-val">{val}%</div>
+                                        <div className="ma-rs-lbl">{lbl}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Action buttons */}
+                          <div className="ma-actions">
+                            {app.status === 'Shortlisted' && (
+                              <Link to={`/interview/${app.jobId}`} state={{ applicationId: app.id, jobTitle: app.jobTitle }} className="ma-btn ma-btn-green">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                Give Interview
+                              </Link>
+                            )}
+                            {iv?.status === 'Scheduled' && (
+                              <Link to={`/interview/${app.jobId}`} className="ma-btn ma-btn-orange">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                Join Interview
+                              </Link>
+                            )}
+                            {rp && (
+                              <Link to={`/report/${iv?.id || app.sessionId}`} className="ma-btn ma-btn-purple">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                View Full Report
+                              </Link>
+                            )}
+                            <Link to={`/job/${app.jobId}`} className="ma-btn ma-btn-outline">
+                              <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              View Job
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Empty state */
+                <div className="ma-empty">
+                  <div className="ma-empty-icon">
+                    <svg viewBox="0 0 24 24" strokeWidth="1.5">
+                      <path d="M22 13V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h9"/>
+                      <path d="M22 13l-4 4-2-2"/>
+                    </svg>
+                  </div>
+                  <h2>No applications found</h2>
+                  <p>
+                    {activeFilter === 'all'
+                      ? "You haven't applied to any jobs yet. Start exploring and find your dream job!"
+                      : `No applications with status "${activeFilter.replace(/-/g,' ')}" found.`}
+                  </p>
+                  <Link to="/jobs" className="ma-browse">
+                    Browse Jobs
+                    <svg viewBox="0 0 24 24" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </Link>
+                </div>
+              )}
+            </main>
+          </>
+        )}
+
+        <Footer />
+      </div>
+    </>
   );
 };
 

@@ -3,699 +3,389 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const ic = {
+  briefcase: 'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
+  tool:      'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',
+  fileText:  'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  plus:      'M12 5v14M5 12h14',
+  x:         'M18 6L6 18M6 6l12 12',
+  check:     'M20 6L9 17l-5-5',
+  alert:     'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
+  arrowLeft: 'M19 12H5M12 5l-7 7 7 7',
+  loader:    'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83',
+  eye:       'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z',
+  mapPin:    'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 13a3 3 0 100-6 3 3 0 000 6z',
+  dollar:    'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+  calendar:  'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18',
+  send:      'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+};
+
+// ─── Tokens ───────────────────────────────────────────────────────────────────
+const C = {
+  white: '#FFFFFF', grey50: '#F8F9FB', grey100: '#F0F2F7', grey200: '#E2E6EF',
+  grey400: '#9CA3B8', grey600: '#6B7280', grey700: '#374151', grey900: '#111827',
+  purple: '#7C3AED', purpleLight: '#EDE9FE', purpleMid: '#A78BFA', purpleDark: '#4C1D95',
+  green: '#059669', greenLight: '#D1FAE5', red: '#DC2626', redLight: '#FEE2E2',
+};
+const font = "'Poppins', sans-serif";
+
+const inputBase = {
+  width: '100%', padding: '10px 13px', fontFamily: font,
+  border: `1.5px solid ${C.grey200}`, borderRadius: 9,
+  fontSize: '0.875rem', color: C.grey900, outline: 'none',
+  background: C.white, transition: 'border-color 0.2s', boxSizing: 'border-box',
+};
+const labelBase = {
+  fontSize: '0.78rem', fontWeight: 700, color: C.grey700,
+  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5, display: 'block',
+};
+const sectionCard = {
+  background: C.white, borderRadius: 14, border: `1px solid ${C.grey200}`,
+  boxShadow: '0 2px 12px rgba(0,0,0,0.04)', marginBottom: 16, overflow: 'hidden',
+};
+const sectionHeader = (iconBg, iconColor) => ({
+  display: 'flex', alignItems: 'center', gap: 10,
+  padding: '1rem 1.375rem', borderBottom: `1px solid ${C.grey100}`,
+  icon: { width: 30, height: 30, borderRadius: 7, background: iconBg,
+    display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  text: { fontSize: '0.9rem', fontWeight: 700, color: C.grey900 },
+  iconColor,
+});
+const btn = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  gap: 7, height: 42, padding: '0 20px', borderRadius: 9, border: 'none',
+  fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: font,
+  textDecoration: 'none', transition: 'filter 0.15s', whiteSpace: 'nowrap',
+};
+
+// ─── Field wrapper ────────────────────────────────────────────────────────────
+const Field = ({ label, required, hint, children, fullWidth }) => (
+  <div style={{ gridColumn: fullWidth ? '1 / -1' : undefined, display: 'flex', flexDirection: 'column', gap: 4 }}>
+    {label && (
+      <label style={labelBase}>
+        {label}{required && <span style={{ color: C.red, marginLeft: 3 }}>*</span>}
+      </label>
+    )}
+    {children}
+    {hint && <span style={{ fontSize: '0.73rem', color: C.grey400, marginTop: 2 }}>{hint}</span>}
+  </div>
+);
+
+// ─── Section wrapper ──────────────────────────────────────────────────────────
+const Section = ({ icon, iconBg = C.purpleLight, iconColor = C.purple, title, children }) => (
+  <div style={sectionCard}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+      padding: '1rem 1.375rem', borderBottom: `1px solid ${C.grey100}` }}>
+      <div style={{ width: 30, height: 30, borderRadius: 7, background: iconBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon d={icon} size={15} color={iconColor} />
+      </div>
+      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: C.grey900 }}>{title}</span>
+    </div>
+    <div style={{ padding: '1.25rem 1.375rem' }}>{children}</div>
+  </div>
+);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const PostJob = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [skillInput, setSkillInput] = useState('');
   const navigate = useNavigate();
 
-  // Form state
   const [formData, setFormData] = useState({
-    title: '',
-    category: 'Development',
-    type: 'Full-time',
-    location: '',
-    salary: '',
-    experience: '',
-    description: '',
-    requirements: '',
-    deadline: '',
-    skills: []
+    title: '', category: 'Development', type: 'Full-time',
+    location: '', salary: '', experience: '',
+    description: '', requirements: '', deadline: '', skills: [],
   });
 
-  // Skills input
-  const [skillInput, setSkillInput] = useState('');
-
   useEffect(() => {
-    // Check if user is logged in and is company
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'company') {
-      navigate('/login');
-      return;
-    }
+    if (!userData || userData.type !== 'company') { navigate('/login'); return; }
     setUser(userData);
-
-    // Get company profile
     const companies = JSON.parse(localStorage.getItem('companies') || '[]');
-    const companyProfile = companies.find(c => c.userId === userData.id || c.email === userData.email);
-    setCompany(companyProfile);
+    setCompany(companies.find(c => c.userId === userData.id || c.email === userData.email));
   }, [navigate]);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleAddSkill = () => {
-    if (skillInput.trim() && !formData.skills.includes(skillInput.trim())) {
-      setFormData({
-        ...formData,
-        skills: [...formData.skills, skillInput.trim()]
-      });
+  const addSkill = () => {
+    const s = skillInput.trim();
+    if (s && !formData.skills.includes(s)) {
+      setFormData({ ...formData, skills: [...formData.skills, s] });
       setSkillInput('');
     }
   };
 
-  const handleRemoveSkill = (skillToRemove) => {
-    setFormData({
-      ...formData,
-      skills: formData.skills.filter(skill => skill !== skillToRemove)
-    });
-  };
+  const removeSkill = s => setFormData({ ...formData, skills: formData.skills.filter(x => x !== s) });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = e => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-    setSuccess(false);
-
-    // Validation
     if (!formData.title || !formData.description || !formData.location || !formData.salary) {
-      setError('Please fill all required fields');
-      setLoading(false);
-      return;
+      setError('Please fill all required fields.'); return;
     }
-
     if (formData.skills.length === 0) {
-      setError('Please add at least one required skill');
-      setLoading(false);
-      return;
+      setError('Please add at least one required skill.'); return;
     }
-
+    setLoading(true);
     try {
-      // Get existing jobs
       const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-      console.log('Existing jobs:', jobs);
-
-      // Create new job
       const newJob = {
         id: Date.now(),
         title: formData.title,
         company: company?.name || user?.name || 'Your Company',
         companyId: company?.id || null,
-        companyLogo: company?.logo || `https://ui-avatars.com/api/?name=${(company?.name || user?.name || 'Company').replace(' ', '+')}&background=667eea&color=fff&size=100`,
-        category: formData.category,
-        type: formData.type,
-        location: formData.location,
-        salary: formData.salary,
-        experience: formData.experience,
-        description: formData.description,
+        companyLogo: company?.logo ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(company?.name || 'Co')}&background=7C3AED&color=fff&size=100`,
+        category: formData.category, type: formData.type,
+        location: formData.location, salary: formData.salary,
+        experience: formData.experience, description: formData.description,
         requirements: formData.skills,
-        fullRequirements: formData.requirements ? formData.requirements.split('\n').filter(req => req.trim()) : [],
+        fullRequirements: formData.requirements ? formData.requirements.split('\n').filter(r => r.trim()) : [],
         postedDate: new Date().toISOString().split('T')[0],
         deadline: formData.deadline || new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-        applicants: 0,
-        active: true,
-        status: 'Active'
+        applicants: 0, active: true, status: 'Active',
       };
-
-      console.log('New job being added:', newJob);
-
-      // Save to localStorage
       jobs.push(newJob);
       localStorage.setItem('jobs', JSON.stringify(jobs));
-      
-      // Verify it was saved
-      const savedJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-      console.log('Jobs after save:', savedJobs);
-
-      // Update company's open positions count
       if (company) {
         const companies = JSON.parse(localStorage.getItem('companies') || '[]');
-        console.log('Existing companies:', companies);
-        
-        const updatedCompanies = companies.map(c => {
-          if (c.id === company.id) {
-            const updated = {
-              ...c,
-              openPositions: (c.openPositions || 0) + 1,
-              activeJobs: [...(c.activeJobs || []), newJob.id]
-            };
-            console.log('Updated company:', updated);
-            return updated;
-          }
-          return c;
-        });
-        
-        localStorage.setItem('companies', JSON.stringify(updatedCompanies));
-        
-        // Verify company was updated
-        const savedCompanies = JSON.parse(localStorage.getItem('companies') || '[]');
-        console.log('Companies after update:', savedCompanies);
+        localStorage.setItem('companies', JSON.stringify(companies.map(c =>
+          c.id === company.id
+            ? { ...c, openPositions: (c.openPositions || 0) + 1, activeJobs: [...(c.activeJobs || []), newJob.id] }
+            : c)));
       }
-
       setSuccess(true);
-      
-      // Reset form
-      setFormData({
-        title: '',
-        category: 'Development',
-        type: 'Full-time',
-        location: '',
-        salary: '',
-        experience: '',
-        description: '',
-        requirements: '',
-        deadline: '',
-        skills: []
-      });
-
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/company/dashboard');
-      }, 2000);
-
-    } catch (error) {
-      console.error('Error saving job:', error);
+      setFormData({ title: '', category: 'Development', type: 'Full-time',
+        location: '', salary: '', experience: '', description: '', requirements: '', deadline: '', skills: [] });
+      setTimeout(() => navigate('/company/dashboard'), 2000);
+    } catch {
       setError('Failed to save job. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Test function to check localStorage
-  const checkLocalStorage = () => {
-    const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    const companies = JSON.parse(localStorage.getItem('companies') || '[]');
-    console.log('Current jobs in localStorage:', jobs);
-    console.log('Current companies in localStorage:', companies);
-    alert(`Jobs: ${jobs.length}, Companies: ${companies.length}. Check console for details.`);
-  };
-
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#f8f9fa'
-    },
-    main: {
-      flex: 1,
-      maxWidth: '1000px',
-      margin: '0 auto',
-      padding: '2rem 5%',
-      width: '100%'
-    },
-    header: {
-      marginBottom: '2rem',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
-    title: {
-      fontSize: '2rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    subtitle: {
-      color: '#666',
-      fontSize: '1rem'
-    },
-    debugBtn: {
-      padding: '0.5rem 1rem',
-      background: '#ff9800',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      cursor: 'pointer',
-      fontSize: '0.9rem'
-    },
-    form: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    formSection: {
-      marginBottom: '2rem',
-      paddingBottom: '2rem',
-      borderBottom: '1px solid #e5e7eb'
-    },
-    sectionTitle: {
-      fontSize: '1.2rem',
-      color: '#333',
-      marginBottom: '1.5rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    formGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '1.5rem',
-      '@media (max-width: 768px)': {
-        gridTemplateColumns: '1fr'
-      }
-    },
-    formGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.5rem'
-    },
-    label: {
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      color: '#4b5563',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.25rem'
-    },
-    required: {
-      color: '#f44336',
-      fontSize: '0.8rem'
-    },
-    input: {
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '0.95rem',
-      transition: 'border-color 0.3s',
-      outline: 'none',
-      ':focus': {
-        borderColor: '#667eea'
-      }
-    },
-    textarea: {
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '0.95rem',
-      minHeight: '150px',
-      resize: 'vertical',
-      outline: 'none',
-      ':focus': {
-        borderColor: '#667eea'
-      }
-    },
-    select: {
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '0.95rem',
-      background: 'white',
-      outline: 'none',
-      cursor: 'pointer',
-      ':focus': {
-        borderColor: '#667eea'
-      }
-    },
-    skillsSection: {
-      marginTop: '1rem'
-    },
-    skillInput: {
-      display: 'flex',
-      gap: '0.5rem',
-      marginBottom: '1rem'
-    },
-    addSkillBtn: {
-      padding: '0.75rem 1.5rem',
-      background: '#667eea',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '0.95rem',
-      cursor: 'pointer',
-      transition: 'background 0.3s',
-      ':hover': {
-        background: '#764ba2'
-      }
-    },
-    skillsList: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '0.5rem',
-      marginTop: '0.5rem'
-    },
-    skillTag: {
-      background: '#e5e7eb',
-      padding: '0.4rem 1rem',
-      borderRadius: '20px',
-      fontSize: '0.9rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    removeSkill: {
-      background: 'none',
-      border: 'none',
-      color: '#666',
-      cursor: 'pointer',
-      fontSize: '1.1rem',
-      display: 'flex',
-      alignItems: 'center',
-      ':hover': {
-        color: '#f44336'
-      }
-    },
-    helpText: {
-      fontSize: '0.8rem',
-      color: '#666',
-      marginTop: '0.25rem'
-    },
-    actions: {
-      display: 'flex',
-      gap: '1rem',
-      justifyContent: 'flex-end',
-      marginTop: '2rem'
-    },
-    submitBtn: {
-      padding: '0.75rem 2rem',
-      background: '#667eea',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      ':hover': {
-        background: '#764ba2',
-        transform: 'translateY(-2px)'
-      },
-      ':disabled': {
-        opacity: 0.7,
-        cursor: 'not-allowed',
-        transform: 'none'
-      }
-    },
-    cancelBtn: {
-      padding: '0.75rem 2rem',
-      background: 'transparent',
-      color: '#666',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      textDecoration: 'none',
-      display: 'inline-block',
-      textAlign: 'center',
-      ':hover': {
-        background: '#f3f4f6',
-        borderColor: '#ccc'
-      }
-    },
-    successMessage: {
-      background: '#4caf50',
-      color: 'white',
-      padding: '1rem',
-      borderRadius: '8px',
-      marginBottom: '1rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    errorMessage: {
-      background: '#f44336',
-      color: 'white',
-      padding: '1rem',
-      borderRadius: '8px',
-      marginBottom: '1rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    previewCard: {
-      background: '#f8f9fa',
-      borderRadius: '8px',
-      padding: '1rem',
-      marginTop: '2rem'
-    },
-    previewTitle: {
-      fontSize: '1rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    previewContent: {
-      color: '#666',
-      fontSize: '0.95rem'
-    }
-  };
+  const iBase = (extra = {}) => ({
+    ...inputBase, ...extra,
+    onFocus: e => e.target.style.borderColor = C.purple,
+    onBlur:  e => e.target.style.borderColor = C.grey200,
+  });
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
       <Navbar />
-      
-      <main style={styles.main}>
-        <div style={styles.header}>
+      <main style={{ flex: 1, maxWidth: 820, margin: '0 auto', width: '100%', padding: '2rem 1.25rem' }}>
+
+        {/* Page header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
-            <h1 style={styles.title}>Post a New Job</h1>
-            <p style={styles.subtitle}>Fill in the details below to create a job posting</p>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.grey400,
+              textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 4 }}>
+              Company Dashboard
+            </div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: C.grey900, margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+              Post a New Job
+            </h1>
+            <p style={{ fontSize: '0.85rem', color: C.grey600, margin: 0 }}>
+              Fill in the details to create a job listing
+            </p>
           </div>
-          <button onClick={checkLocalStorage} style={styles.debugBtn}>
-            🔍 Debug Storage
-          </button>
+          <Link to="/company/dashboard"
+            style={{ ...btn, background: C.grey100, color: C.grey700, border: `1px solid ${C.grey200}` }}>
+            <Icon d={ic.arrowLeft} size={14} color={C.grey700} />
+            Back to Dashboard
+          </Link>
         </div>
 
-        {/* Success/Error Messages */}
+        {/* Alerts */}
         {success && (
-          <div style={styles.successMessage}>
-            <span>✅</span>
-            <span>Job posted successfully! Redirecting to dashboard...</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+            background: C.greenLight, border: `1px solid ${C.green}40`, borderRadius: 10, marginBottom: 14 }}>
+            <Icon d={ic.check} size={16} color={C.green} sw={2.5} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: C.green }}>
+              Job posted successfully! Redirecting to dashboard…
+            </span>
           </div>
         )}
-
         {error && (
-          <div style={styles.errorMessage}>
-            <span>❌</span>
-            <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+            background: C.redLight, border: `1px solid ${C.red}40`, borderRadius: 10, marginBottom: 14 }}>
+            <Icon d={ic.alert} size={16} color={C.red} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: C.red }}>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Basic Information */}
-          <div style={styles.formSection}>
-            <h2 style={styles.sectionTitle}>
-              <span>📋</span> Basic Information
-            </h2>
-            
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Job Title <span style={styles.required}>*</span>
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="e.g. Senior Frontend Developer"
-                  value={formData.title}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
+        <form onSubmit={handleSubmit}>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Category</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  style={styles.select}
-                >
-                  <option value="Development">Development</option>
-                  <option value="Design">Design</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Management">Management</option>
-                  <option value="DevOps">DevOps</option>
-                  <option value="AI/ML">AI/ML</option>
-                  <option value="Data Science">Data Science</option>
-                  <option value="Other">Other</option>
+          {/* Basic Info */}
+          <Section icon={ic.briefcase} title="Basic Information">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Field label="Job Title" required>
+                <input {...iBase()} type="text" name="title" value={formData.title}
+                  onChange={handleChange} placeholder="e.g. Senior Frontend Developer" required />
+              </Field>
+              <Field label="Category">
+                <select style={inputBase} name="category" value={formData.category} onChange={handleChange}>
+                  {['Development','Design','Marketing','Sales','Management','DevOps','AI/ML','Data Science','Other'].map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
                 </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Job Type</label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  style={styles.select}
-                >
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Internship">Internship</option>
-                  <option value="Remote">Remote</option>
-                  <option value="Hybrid">Hybrid</option>
+              </Field>
+              <Field label="Job Type">
+                <select style={inputBase} name="type" value={formData.type} onChange={handleChange}>
+                  {['Full-time','Part-time','Contract','Internship','Remote','Hybrid'].map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
                 </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Location <span style={styles.required}>*</span>
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  placeholder="e.g. Bangalore (Remote)"
-                  value={formData.location}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Salary <span style={styles.required}>*</span>
-                </label>
-                <input
-                  type="text"
-                  name="salary"
-                  placeholder="e.g. ₹15-25 LPA"
-                  value={formData.salary}
-                  onChange={handleChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Experience Required</label>
-                <input
-                  type="text"
-                  name="experience"
-                  placeholder="e.g. 3-5 years"
-                  value={formData.experience}
-                  onChange={handleChange}
-                  style={styles.input}
-                />
-              </div>
+              </Field>
+              <Field label="Location" required>
+                <input {...iBase()} type="text" name="location" value={formData.location}
+                  onChange={handleChange} placeholder="e.g. Karachi (Remote)" required />
+              </Field>
+              <Field label="Salary" required>
+                <input {...iBase()} type="text" name="salary" value={formData.salary}
+                  onChange={handleChange} placeholder="e.g. Rs 80k–120k/month" required />
+              </Field>
+              <Field label="Experience Required">
+                <input {...iBase()} type="text" name="experience" value={formData.experience}
+                  onChange={handleChange} placeholder="e.g. 3–5 years" />
+              </Field>
             </div>
-          </div>
+          </Section>
 
-          {/* Skills Required */}
-          <div style={styles.formSection}>
-            <h2 style={styles.sectionTitle}>
-              <span>🛠️</span> Required Skills <span style={styles.required}>*</span>
-            </h2>
-
-            <div style={styles.skillsSection}>
-              <div style={styles.skillInput}>
-                <input
-                  type="text"
-                  placeholder="e.g. React, Python, AWS"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  style={{...styles.input, flex: 1}}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
-                />
-                <button 
-                  type="button" 
-                  onClick={handleAddSkill}
-                  style={styles.addSkillBtn}
-                >
-                  Add Skill
-                </button>
-              </div>
-
-              <div style={styles.skillsList}>
-                {formData.skills.map((skill, index) => (
-                  <span key={index} style={styles.skillTag}>
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSkill(skill)}
-                      style={styles.removeSkill}
-                    >
-                      ×
+          {/* Skills */}
+          <Section icon={ic.tool} iconBg="#FEF3C7" iconColor={C.amber || '#D97706'} title="Required Skills">
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                {...iBase({ flex: 1 })}
+                type="text"
+                placeholder="e.g. React, Python, AWS — press Enter to add"
+                value={skillInput}
+                onChange={e => setSkillInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
+              />
+              <button type="button" onClick={addSkill}
+                style={{ ...btn, background: C.purple, color: C.white, boxShadow: `0 2px 10px ${C.purple}30` }}>
+                <Icon d={ic.plus} size={14} color={C.white} />
+                Add
+              </button>
+            </div>
+            {formData.skills.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {formData.skills.map((s, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 12px', background: C.purpleLight, borderRadius: 999,
+                    fontSize: '0.8rem', fontWeight: 600, color: C.purple }}>
+                    {s}
+                    <button type="button" onClick={() => removeSkill(s)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', padding: 0, color: C.purpleDark }}>
+                      <Icon d={ic.x} size={12} color={C.purple} sw={2.5} />
                     </button>
                   </span>
                 ))}
               </div>
-              <div style={styles.helpText}>
-                Add skills required for this position (at least one)
-              </div>
-            </div>
-          </div>
+            ) : (
+              <div style={{ fontSize: '0.78rem', color: C.grey400 }}>No skills added yet — add at least one.</div>
+            )}
+          </Section>
 
           {/* Description */}
-          <div style={styles.formSection}>
-            <h2 style={styles.sectionTitle}>
-              <span>📝</span> Job Description
-            </h2>
+          <Section icon={ic.fileText} iconBg="#DBEAFE" iconColor="#2563EB" title="Job Description">
+            <div style={{ display: 'grid', gap: 14 }}>
+              <Field label="Full Description" required
+                hint="Include role details, responsibilities, team culture, and benefits.">
+                <textarea
+                  style={{ ...inputBase, minHeight: 140, resize: 'vertical' }}
+                  name="description" value={formData.description} onChange={handleChange}
+                  placeholder="Describe the role and what you're looking for…"
+                  onFocus={e => e.target.style.borderColor = C.purple}
+                  onBlur={e => e.target.style.borderColor = C.grey200}
+                  required />
+              </Field>
+              <Field label="Additional Requirements" hint="One requirement per line (optional).">
+                <textarea
+                  style={{ ...inputBase, minHeight: 90, resize: 'vertical' }}
+                  name="requirements" value={formData.requirements} onChange={handleChange}
+                  placeholder="Enter each requirement on a new line…"
+                  onFocus={e => e.target.style.borderColor = C.purple}
+                  onBlur={e => e.target.style.borderColor = C.grey200} />
+              </Field>
+              <Field label="Application Deadline">
+                <input {...iBase({ maxWidth: 240 })} type="date" name="deadline"
+                  value={formData.deadline} onChange={handleChange}
+                  min={new Date().toISOString().split('T')[0]} />
+              </Field>
+            </div>
+          </Section>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>
-                Full Description <span style={styles.required}>*</span>
-              </label>
-              <textarea
-                name="description"
-                placeholder="Describe the role, responsibilities, and what you're looking for..."
-                value={formData.description}
-                onChange={handleChange}
-                style={styles.textarea}
-                required
-              />
-              <div style={styles.helpText}>
-                Include details about the role, team culture, benefits, etc.
+          {/* Live preview */}
+          {formData.title && (
+            <div style={{ background: C.purpleLight, border: `1px solid ${C.purpleMid}40`,
+              borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 16 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.purple,
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Preview
               </div>
-            </div>
-
-            <div style={{...styles.formGroup, marginTop: '1.5rem'}}>
-              <label style={styles.label}>Additional Requirements (Optional)</label>
-              <textarea
-                name="requirements"
-                placeholder="Enter each requirement on a new line..."
-                value={formData.requirements}
-                onChange={handleChange}
-                style={{...styles.textarea, minHeight: '100px'}}
-              />
-            </div>
-
-            <div style={{...styles.formGroup, marginTop: '1.5rem'}}>
-              <label style={styles.label}>Application Deadline</label>
-              <input
-                type="date"
-                name="deadline"
-                value={formData.deadline}
-                onChange={handleChange}
-                style={styles.input}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
-
-          {/* Preview Section */}
-          {formData.title && formData.description && (
-            <div style={styles.previewCard}>
-              <h3 style={styles.previewTitle}>Preview:</h3>
-              <div style={styles.previewContent}>
-                <strong>{formData.title}</strong> at {company?.name || 'Your Company'}
-                <div style={{marginTop: '0.5rem', fontSize: '0.9rem'}}>
-                  📍 {formData.location} • 💰 {formData.salary} • ⏰ {formData.type}
-                </div>
-                <div style={{marginTop: '0.5rem'}}>
-                  Skills: {formData.skills.join(' • ')}
-                </div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: C.grey900 }}>{formData.title}</div>
+              <div style={{ fontSize: '0.82rem', color: C.purple, fontWeight: 600 }}>
+                {company?.name || 'Your Company'}
               </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8,
+                fontSize: '0.78rem', color: C.grey600 }}>
+                {formData.location && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon d={ic.mapPin} size={12} color={C.grey400} />{formData.location}</span>}
+                {formData.salary   && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon d={ic.dollar} size={12} color={C.grey400} />{formData.salary}</span>}
+                {formData.type     && <span>{formData.type}</span>}
+              </div>
+              {formData.skills.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: '0.78rem', color: C.grey600 }}>
+                  Skills: {formData.skills.join(' · ')}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Form Actions */}
-          <div style={styles.actions}>
-            <Link to="/company/dashboard" style={styles.cancelBtn}>
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <Link to="/company/dashboard"
+              style={{ ...btn, background: C.grey100, color: C.grey700, border: `1px solid ${C.grey200}` }}>
               Cancel
             </Link>
-            <button 
-              type="submit" 
-              style={styles.submitBtn}
-              disabled={loading}
-            >
-              {loading ? 'Posting...' : 'Post Job'}
+            <button type="submit" disabled={loading}
+              style={{ ...btn, background: C.purple, color: C.white,
+                boxShadow: `0 2px 12px ${C.purple}35`, opacity: loading ? 0.65 : 1 }}>
+              {loading
+                ? <><div style={{ animation: 'spin 1s linear infinite' }}>
+                    <Icon d={ic.loader} size={15} color={C.white} /></div> Posting…</>
+                : <><Icon d={ic.send} size={15} color={C.white} /> Post Job</>}
             </button>
           </div>
         </form>
       </main>
-
       <Footer />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        button:hover { filter: brightness(0.91) !important; }
+        a:hover { filter: brightness(0.88) !important; }
+        select { font-family: 'Poppins', sans-serif !important; }
+      `}</style>
     </div>
   );
 };

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { findUserByCredentials } from '../data/storage';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('candidate');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,262 +17,342 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
-    // Validation
     if (!email || !password) {
       setError('Please enter both email and password');
       setLoading(false);
       return;
     }
-
-    // Get users from localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    // Find user (case-insensitive email)
-    const user = users.find(u => 
-      u.email.toLowerCase() === email.toLowerCase() && 
-      u.password === password && 
-      u.type === userType
-    );
-    
+    const user = findUserByCredentials(email, password, userType);
     if (user) {
-      // Store user in localStorage (without password)
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
       localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      
-      // Redirect based on user type
-      if (userType === 'company') {
-        navigate('/company/dashboard');
-      } else {
-        navigate('/jobs');
-      }
+      navigate(userType === 'company' ? '/company/dashboard' : '/jobs');
     } else {
       setError('Invalid email or password. Please try again.');
     }
-    
     setLoading(false);
   };
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    main: {
-      flex: 1,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2rem',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    card: {
-      background: 'white',
-      borderRadius: '20px',
-      boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-      width: '100%',
-      maxWidth: '450px',
-      padding: '2.5rem'
-    },
-    header: {
-      textAlign: 'center',
-      marginBottom: '2rem'
-    },
-    title: {
-      fontSize: '2rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    subtitle: {
-      color: '#666',
-      fontSize: '0.95rem'
-    },
-    userType: {
-      display: 'flex',
-      gap: '1rem',
-      marginBottom: '1.5rem',
-      justifyContent: 'center'
-    },
-    userTypeLabel: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      padding: '0.5rem 1rem',
-      borderRadius: '30px',
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      background: '#f3f4f6'
-    },
-    userTypeSelected: {
-      background: '#667eea',
-      color: 'white'
-    },
-    userTypeInput: {
-      display: 'none'
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.2rem'
-    },
-    inputGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.3rem'
-    },
-    label: {
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      color: '#4b5563'
-    },
-    input: {
-      padding: '0.75rem 1rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '10px',
-      fontSize: '1rem',
-      transition: 'border-color 0.3s',
-      outline: 'none',
-      ':focus': {
-        borderColor: '#667eea'
-      }
-    },
-    error: {
-      color: '#f44336',
-      fontSize: '0.9rem',
-      textAlign: 'center',
-      marginTop: '0.5rem',
-      padding: '0.5rem',
-      background: '#ffebee',
-      borderRadius: '5px'
-    },
-    button: {
-      background: '#667eea',
-      color: 'white',
-      padding: '0.75rem',
-      border: 'none',
-      borderRadius: '10px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-      transition: 'background 0.3s',
-      marginTop: '0.5rem',
-      ':hover': {
-        background: '#764ba2'
-      },
-      ':disabled': {
-        opacity: 0.7,
-        cursor: 'not-allowed'
-      }
-    },
-    footer: {
-      textAlign: 'center',
-      marginTop: '1.5rem',
-      color: '#666'
-    },
-    link: {
-      color: '#667eea',
-      textDecoration: 'none',
-      fontWeight: 600,
-      ':hover': {
-        textDecoration: 'underline'
-      }
-    },
-    demoNote: {
-      marginTop: '2rem',
-      padding: '1rem',
-      background: '#f3f4f6',
-      borderRadius: '10px',
-      fontSize: '0.9rem',
-      textAlign: 'center',
-      color: '#666'
-    }
-  };
-
   return (
-    <div style={styles.container}>
-      <Navbar />
-      <main style={styles.main}>
-        <div style={styles.card}>
-          <div style={styles.header}>
-            <h1 style={styles.title}>Welcome Back</h1>
-            <p style={styles.subtitle}>Login to your account</p>
-          </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-          <div style={styles.userType}>
-            <label style={{
-              ...styles.userTypeLabel,
-              ...(userType === 'candidate' ? styles.userTypeSelected : {})
-            }}>
-              <input
-                type="radio"
-                name="userType"
-                value="candidate"
-                checked={userType === 'candidate'}
-                onChange={(e) => setUserType(e.target.value)}
-                style={styles.userTypeInput}
-              />
-              🎯 Candidate
-            </label>
-            <label style={{
-              ...styles.userTypeLabel,
-              ...(userType === 'company' ? styles.userTypeSelected : {})
-            }}>
-              <input
-                type="radio"
-                name="userType"
-                value="company"
-                checked={userType === 'company'}
-                onChange={(e) => setUserType(e.target.value)}
-                style={styles.userTypeInput}
-              />
-              🏢 Company
-            </label>
-          </div>
+        .auth-root {
+          font-family: 'Poppins', sans-serif;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #f8f7ff;
+          -webkit-font-smoothing: antialiased;
+          color: #1c0b4b;
+        }
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Email</label>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={styles.input}
-                required
-              />
+        .auth-main {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3rem 1.25rem;
+        }
+
+        /* ── CARD ── */
+        .auth-card {
+          background: white;
+          border: 1.5px solid #f3f4f6;
+          border-radius: 24px;
+          box-shadow: 0 20px 60px rgba(28,11,75,0.08);
+          width: 100%;
+          max-width: 460px;
+          padding: 2.5rem;
+        }
+
+        /* ── HEADER ── */
+        .auth-logo-mark {
+          width: 48px; height: 48px;
+          background: #7c3aed;
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.5rem;
+        }
+        .auth-logo-mark svg { width: 24px; height: 24px; stroke: white; fill: none; }
+
+        .auth-title {
+          font-size: 1.6rem; font-weight: 800;
+          color: #1c0b4b; letter-spacing: -0.03em;
+          text-align: center; margin-bottom: 0.4rem;
+        }
+        .auth-subtitle {
+          font-size: 0.875rem; color: #9ca3af;
+          text-align: center; margin-bottom: 2rem;
+        }
+
+        /* ── USER TYPE TOGGLE ── */
+        .auth-toggle {
+          display: flex;
+          background: #f9fafb;
+          border: 1.5px solid #f3f4f6;
+          border-radius: 12px;
+          padding: 4px;
+          margin-bottom: 1.75rem;
+          gap: 4px;
+        }
+        .auth-toggle-btn {
+          flex: 1;
+          display: flex; align-items: center; justify-content: center;
+          gap: 0.5rem;
+          padding: 0.6rem 1rem;
+          border-radius: 9px;
+          border: none;
+          font-family: 'Poppins', sans-serif;
+          font-size: 0.84rem; font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: #6b7280;
+          background: transparent;
+        }
+        .auth-toggle-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; flex-shrink: 0; }
+        .auth-toggle-btn.active {
+          background: white;
+          color: #7c3aed;
+          box-shadow: 0 2px 8px rgba(28,11,75,0.08);
+        }
+
+        /* ── FORM ── */
+        .auth-form { display: flex; flex-direction: column; gap: 1.1rem; }
+
+        .auth-field { display: flex; flex-direction: column; gap: 0.4rem; }
+        .auth-label {
+          font-size: 0.75rem; font-weight: 600;
+          color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .auth-input-wrap {
+          position: relative; display: flex; align-items: center;
+        }
+        .auth-input-icon {
+          position: absolute; left: 0.875rem;
+          width: 16px; height: 16px;
+          stroke: #9ca3af; fill: none; pointer-events: none; flex-shrink: 0;
+        }
+        .auth-input {
+          width: 100%;
+          padding: 0.75rem 0.875rem 0.75rem 2.5rem;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 12px;
+          font-family: 'Poppins', sans-serif;
+          font-size: 0.9rem;
+          color: #1c0b4b;
+          background: white;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .auth-input:focus { border-color: #7c3aed; }
+        .auth-input::placeholder { color: #d1d5db; }
+        .auth-input.has-toggle { padding-right: 2.75rem; }
+
+        .auth-eye-btn {
+          position: absolute; right: 0.875rem;
+          background: none; border: none; cursor: pointer;
+          padding: 0; display: flex; align-items: center;
+          color: #9ca3af; transition: color 0.2s;
+        }
+        .auth-eye-btn:hover { color: #7c3aed; }
+        .auth-eye-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+
+        /* ── ERROR ── */
+        .auth-error {
+          display: flex; align-items: center; gap: 0.5rem;
+          background: #fef2f2; border: 1.5px solid #fecaca;
+          border-radius: 10px; padding: 0.75rem 0.875rem;
+          font-size: 0.82rem; color: #ef4444; font-weight: 500;
+        }
+        .auth-error svg { width: 15px; height: 15px; stroke: currentColor; fill: none; flex-shrink: 0; }
+
+        /* ── SUBMIT BTN ── */
+        .auth-submit {
+          width: 100%;
+          padding: 0.875rem;
+          background: #7c3aed;
+          color: white;
+          border: none;
+          border-radius: 12px;
+          font-family: 'Poppins', sans-serif;
+          font-size: 0.9rem; font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+          margin-top: 0.25rem;
+        }
+        .auth-submit:hover:not(:disabled) { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,58,237,0.3); }
+        .auth-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+        .auth-submit svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+
+        /* ── SPINNER ── */
+        .auth-spin {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: auth-spin 0.7s linear infinite;
+        }
+        @keyframes auth-spin { to { transform: rotate(360deg); } }
+
+        /* ── FOOTER ── */
+        .auth-footer {
+          text-align: center;
+          margin-top: 1.5rem;
+          font-size: 0.84rem; color: #9ca3af;
+        }
+        .auth-footer a {
+          color: #7c3aed; text-decoration: none; font-weight: 600;
+        }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        .auth-divider {
+          display: flex; align-items: center; gap: 0.75rem;
+          margin: 1.25rem 0;
+        }
+        .auth-divider-line { flex: 1; height: 1px; background: #f3f4f6; }
+        .auth-divider-text { font-size: 0.75rem; color: #d1d5db; font-weight: 500; }
+      `}</style>
+
+      <div className="auth-root">
+        <Navbar />
+
+        <main className="auth-main">
+          <div className="auth-card">
+
+            {/* Logo */}
+            <div className="auth-logo-mark">
+              <svg viewBox="0 0 24 24" strokeWidth="2.2">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
             </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
-                required
-              />
+            <h1 className="auth-title">Welcome back</h1>
+            <p className="auth-subtitle">Login to your account to continue</p>
+
+            {/* User Type Toggle */}
+            <div className="auth-toggle">
+              <button
+                type="button"
+                className={`auth-toggle-btn ${userType === 'candidate' ? 'active' : ''}`}
+                onClick={() => setUserType('candidate')}
+              >
+                <svg viewBox="0 0 24 24" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Candidate
+              </button>
+              <button
+                type="button"
+                className={`auth-toggle-btn ${userType === 'company' ? 'active' : ''}`}
+                onClick={() => setUserType('company')}
+              >
+                <svg viewBox="0 0 24 24" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Company
+              </button>
             </div>
 
-            {error && <div style={styles.error}>{error}</div>}
+            {/* Form */}
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <div className="auth-field">
+                <label className="auth-label">Email</label>
+                <div className="auth-input-wrap">
+                  <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-            <button type="submit" style={styles.button} disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
+              <div className="auth-field">
+                <label className="auth-label">Password</label>
+                <div className="auth-input-wrap">
+                  <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                  </svg>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="auth-input has-toggle"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" strokeWidth="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
 
-          <div style={styles.footer}>
-            Don't have an account? <Link to="/signup" style={styles.link}>Sign up</Link>
+              {error && (
+                <div className="auth-error">
+                  <svg viewBox="0 0 24 24" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" className="auth-submit" disabled={loading}>
+                {loading ? (
+                  <><div className="auth-spin" /> Logging in...</>
+                ) : (
+                  <>
+                    Login
+                    <svg viewBox="0 0 24 24" strokeWidth="2.5">
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                      <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <div className="auth-divider-line" />
+              <span className="auth-divider-text">or</span>
+              <div className="auth-divider-line" />
+            </div>
+
+            <div className="auth-footer">
+              Don't have an account? <Link to="/signup">Sign up</Link>
+            </div>
           </div>
+        </main>
 
-          <div style={styles.demoNote}>
-            <strong>📝 Note:</strong> Sign up first, then login with your credentials!
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 };
 

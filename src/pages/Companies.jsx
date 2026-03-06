@@ -8,344 +8,320 @@ const Companies = () => {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    search: '',
-    industry: '',
-    location: ''
-  });
+  const [filters, setFilters] = useState({ search: '', industry: '', location: '' });
   const [industries, setIndustries] = useState([]);
   const [locations, setLocations] = useState([]);
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, companies]);
+  useEffect(() => { loadCompanies(); }, []);
+  useEffect(() => { applyFilters(); }, [filters, companies]);
 
   const loadCompanies = () => {
-    const companiesData = JSON.parse(localStorage.getItem('companies') || '[]');
-    setCompanies(companiesData);
-    setFilteredCompanies(companiesData);
-    
-    // Extract unique industries and locations
-    const uniqueIndustries = [...new Set(companiesData.map(c => c.industry))];
-    const uniqueLocations = [...new Set(companiesData.map(c => c.location))];
-    setIndustries(uniqueIndustries);
-    setLocations(uniqueLocations);
-    
+    const data = JSON.parse(localStorage.getItem('companies') || '[]');
+    setCompanies(data);
+    setFilteredCompanies(data);
+    setIndustries([...new Set(data.map(c => c.industry).filter(Boolean))]);
+    setLocations([...new Set(data.map(c => c.location).filter(Boolean))]);
     setLoading(false);
   };
 
   const applyFilters = () => {
-    let filtered = [...companies];
-
-    // Search filter
-    if (filters.search) {
-      filtered = filtered.filter(company => 
-        company.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        company.description?.toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    // Industry filter
-    if (filters.industry) {
-      filtered = filtered.filter(company => company.industry === filters.industry);
-    }
-
-    // Location filter
-    if (filters.location) {
-      filtered = filtered.filter(company => company.location === filters.location);
-    }
-
-    setFilteredCompanies(filtered);
+    let f = [...companies];
+    if (filters.search) f = f.filter(c => c.name.toLowerCase().includes(filters.search.toLowerCase()) || c.description?.toLowerCase().includes(filters.search.toLowerCase()));
+    if (filters.industry) f = f.filter(c => c.industry === filters.industry);
+    if (filters.location) f = f.filter(c => c.location === filters.location);
+    setFilteredCompanies(f);
   };
 
-  const handleFilterChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleFilterChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
+  const clearFilters = () => setFilters({ search: '', industry: '', location: '' });
 
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      industry: '',
-      location: ''
-    });
-  };
-
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    main: {
-      flex: 1,
-      background: '#f8f9fa'
-    },
-    hero: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white',
-      padding: '3rem 5%',
-      textAlign: 'center'
-    },
-    heroTitle: {
-      fontSize: '2.5rem',
-      marginBottom: '1rem'
-    },
-    heroText: {
-      fontSize: '1.2rem',
-      opacity: 0.9,
-      maxWidth: '600px',
-      margin: '0 auto'
-    },
-    content: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '2rem 5%'
-    },
-    filtersSection: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '1.5rem',
-      marginBottom: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    filtersTitle: {
-      fontSize: '1.1rem',
-      color: '#333',
-      marginBottom: '1rem'
-    },
-    filtersGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '1rem',
-      alignItems: 'end'
-    },
-    filterGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.3rem'
-    },
-    filterLabel: {
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      color: '#4b5563'
-    },
-    filterInput: {
-      padding: '0.6rem',
-      border: '1px solid #e5e7eb',
-      borderRadius: '5px',
-      fontSize: '0.95rem',
-      outline: 'none',
-      ':focus': {
-        borderColor: '#667eea'
-      }
-    },
-    filterSelect: {
-      padding: '0.6rem',
-      border: '1px solid #e5e7eb',
-      borderRadius: '5px',
-      fontSize: '0.95rem',
-      outline: 'none',
-      background: 'white'
-    },
-    clearBtn: {
-      padding: '0.6rem 1rem',
-      background: '#f3f4f6',
-      border: 'none',
-      borderRadius: '5px',
-      color: '#4b5563',
-      cursor: 'pointer',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      transition: 'all 0.3s',
-      height: 'fit-content',
-      ':hover': {
-        background: '#e5e7eb'
-      }
-    },
-    resultsHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '1.5rem'
-    },
-    resultsCount: {
-      color: '#4b5563',
-      fontSize: '0.95rem'
-    },
-    resultsCountStrong: {
-      color: '#667eea',
-      fontWeight: 600
-    },
-    companiesGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-      gap: '2rem'
-    },
-    noCompanies: {
-      textAlign: 'center',
-      padding: '3rem',
-      color: '#666',
-      background: 'white',
-      borderRadius: '10px'
-    },
-    loading: {
-      textAlign: 'center',
-      padding: '3rem',
-      color: '#667eea'
-    },
-    statsRow: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '1.5rem',
-      marginBottom: '2rem'
-    },
-    statCard: {
-      background: 'white',
-      padding: '1.5rem',
-      borderRadius: '10px',
-      textAlign: 'center',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    statNumber: {
-      fontSize: '2rem',
-      fontWeight: 'bold',
-      color: '#667eea',
-      marginBottom: '0.5rem'
-    },
-    statLabel: {
-      color: '#666',
-      fontSize: '0.95rem'
-    }
-  };
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const totalOpenings = companies.reduce((sum, c) => sum + (c.openPositions || 0), 0);
+  const avgRating = companies.length ? (companies.reduce((sum, c) => sum + (c.rating || 0), 0) / companies.length).toFixed(1) : '—';
 
   if (loading) {
     return (
-      <div style={styles.container}>
+      <div className="co-root">
         <Navbar />
-        <div style={styles.loading}>Loading companies...</div>
+        <div className="co-loading"><div className="co-spinner" /><p>Loading companies...</p></div>
         <Footer />
       </div>
     );
   }
 
-  // Calculate stats
-  const totalOpenings = companies.reduce((sum, c) => sum + c.openPositions, 0);
-  const avgRating = (companies.reduce((sum, c) => sum + c.rating, 0) / companies.length).toFixed(1);
-
   return (
-    <div style={styles.container}>
-      <Navbar />
-      
-      <div style={styles.hero}>
-        <h1 style={styles.heroTitle}>Top Companies Hiring Now</h1>
-        <p style={styles.heroText}>Discover amazing companies and find your perfect workplace</p>
-      </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      <div style={styles.content}>
+        .co-root {
+          font-family: 'Poppins', sans-serif;
+          background: #f8f7ff;
+          min-height: 100vh;
+          color: #1c0b4b;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── LOADING ── */
+        .co-loading {
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 1rem; padding: 6rem; color: #9ca3af; font-size: 0.9rem;
+        }
+        .co-spinner {
+          width: 36px; height: 36px;
+          border: 3px solid #ede9fe; border-top-color: #7c3aed;
+          border-radius: 50%; animation: co-spin 0.8s linear infinite;
+        }
+        @keyframes co-spin { to { transform: rotate(360deg); } }
+
+        /* ── HERO ── */
+        .co-hero {
+          background: #1c0b4b; padding: 3.5rem 5%;
+          position: relative; overflow: hidden;
+        }
+        .co-hero::before {
+          content: ''; position: absolute; top: -150px; right: -150px;
+          width: 500px; height: 500px;
+          background: radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 65%);
+          pointer-events: none;
+        }
+        .co-hero-inner {
+          max-width: 1300px; margin: 0 auto;
+          position: relative; z-index: 1;
+        }
+        .co-hero-tag {
+          font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+          text-transform: uppercase; color: #a78bfa; margin-bottom: 0.6rem;
+        }
+        .co-hero-title {
+          font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800;
+          color: white; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 0.5rem;
+        }
+        .co-hero-sub { font-size: 0.9rem; color: #9ca3af; }
+
+        /* ── STATS ── */
+        .co-stats-row {
+          max-width: 1300px; margin: 0 auto;
+          padding: 1.5rem 5% 0;
+          display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem;
+        }
+        .co-stat-tile {
+          background: white; border: 1.5px solid #f3f4f6;
+          border-radius: 14px; padding: 1.25rem 1.5rem;
+          display: flex; align-items: center; gap: 1rem;
+        }
+        .co-stat-icon {
+          width: 44px; height: 44px; background: #f5f3ff;
+          border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .co-stat-icon svg { width: 20px; height: 20px; stroke: #7c3aed; fill: none; }
+        .co-stat-num { font-size: 1.5rem; font-weight: 800; color: #1c0b4b; letter-spacing: -0.03em; line-height: 1; }
+        .co-stat-label { font-size: 0.75rem; color: #9ca3af; font-weight: 500; margin-top: 0.2rem; }
+
+        /* ── CONTENT ── */
+        .co-content { max-width: 1300px; margin: 0 auto; padding: 1.75rem 5%; }
+
+        /* ── FILTERS ── */
+        .co-filters {
+          background: white; border: 1.5px solid #f3f4f6;
+          border-radius: 16px; padding: 1.25rem 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+        .co-filters-head {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 1.1rem;
+        }
+        .co-filters-title { font-size: 0.9rem; font-weight: 700; color: #1c0b4b; }
+        .co-filter-badge {
+          font-size: 0.7rem; font-weight: 700; color: white;
+          background: #7c3aed; padding: 0.15rem 0.55rem; border-radius: 100px;
+        }
+        .co-filters-grid {
+          display: grid; grid-template-columns: repeat(3, 1fr) auto;
+          gap: 1rem; align-items: end;
+        }
+        .co-filter-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .co-filter-label {
+          font-size: 0.72rem; font-weight: 600; color: #9ca3af;
+          text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .co-filter-input, .co-filter-select {
+          padding: 0.6rem 0.875rem;
+          border: 1.5px solid #f3f4f6; border-radius: 10px;
+          font-family: 'Poppins', sans-serif; font-size: 0.84rem;
+          color: #1c0b4b; background: #fafafa; outline: none;
+          transition: border-color 0.2s; width: 100%;
+        }
+        .co-filter-input:focus, .co-filter-select:focus { border-color: #7c3aed; background: white; }
+        .co-filter-input::placeholder { color: #d1d5db; }
+        .co-clear-btn {
+          padding: 0.6rem 1.25rem;
+          background: #f5f3ff; border: 1.5px solid #ede9fe;
+          border-radius: 10px; color: #7c3aed;
+          font-family: 'Poppins', sans-serif; font-size: 0.82rem;
+          font-weight: 600; cursor: pointer; transition: all 0.2s;
+          white-space: nowrap; height: fit-content;
+        }
+        .co-clear-btn:hover { background: #ede9fe; }
+
+        /* ── RESULTS ── */
+        .co-results-bar {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 1.25rem;
+        }
+        .co-count { font-size: 0.85rem; color: #6b7280; font-weight: 500; }
+        .co-count strong { color: #7c3aed; font-weight: 700; }
+
+        /* ── GRID ── */
+        .co-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 1.25rem;
+        }
+
+        /* ── EMPTY ── */
+        .co-empty {
+          background: white; border: 1.5px solid #f3f4f6;
+          border-radius: 16px; padding: 4rem 2rem; text-align: center;
+        }
+        .co-empty-icon {
+          width: 64px; height: 64px; background: #f5f3ff;
+          border-radius: 16px; display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.25rem;
+        }
+        .co-empty-icon svg { width: 28px; height: 28px; stroke: #c4b5fd; fill: none; }
+        .co-empty h3 { font-size: 1rem; font-weight: 700; color: #1c0b4b; margin-bottom: 0.4rem; }
+        .co-empty p { font-size: 0.84rem; color: #9ca3af; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+          .co-stats-row { grid-template-columns: repeat(2, 1fr); }
+          .co-filters-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+          .co-stats-row { grid-template-columns: repeat(2, 1fr); }
+          .co-filters-grid { grid-template-columns: 1fr; }
+          .co-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
+      <div className="co-root">
+        <Navbar />
+
+        {/* Hero */}
+        <section className="co-hero">
+          <div className="co-hero-inner">
+            <p className="co-hero-tag">Employers</p>
+            <h1 className="co-hero-title">Top Companies Hiring Now</h1>
+            <p className="co-hero-sub">Discover amazing companies and find your perfect workplace</p>
+          </div>
+        </section>
+
         {/* Stats */}
-        <div style={styles.statsRow}>
-          <div style={styles.statCard}>
-            <div style={styles.statNumber}>{companies.length}</div>
-            <div style={styles.statLabel}>Total Companies</div>
+        <div className="co-stats-row">
+          <div className="co-stat-tile">
+            <div className="co-stat-icon">
+              <svg viewBox="0 0 24 24" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div>
+              <div className="co-stat-num">{companies.length}</div>
+              <div className="co-stat-label">Companies</div>
+            </div>
           </div>
-          <div style={styles.statCard}>
-            <div style={styles.statNumber}>{totalOpenings}</div>
-            <div style={styles.statLabel}>Open Positions</div>
+          <div className="co-stat-tile">
+            <div className="co-stat-icon">
+              <svg viewBox="0 0 24 24" strokeWidth="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            </div>
+            <div>
+              <div className="co-stat-num">{totalOpenings}</div>
+              <div className="co-stat-label">Open Positions</div>
+            </div>
           </div>
-          <div style={styles.statCard}>
-            <div style={styles.statNumber}>{avgRating}</div>
-            <div style={styles.statLabel}>Average Rating</div>
+          <div className="co-stat-tile">
+            <div className="co-stat-icon">
+              <svg viewBox="0 0 24 24" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div>
+              <div className="co-stat-num">{avgRating}</div>
+              <div className="co-stat-label">Avg Rating</div>
+            </div>
           </div>
-          <div style={styles.statCard}>
-            <div style={styles.statNumber}>{locations.length}</div>
-            <div style={styles.statLabel}>Locations</div>
+          <div className="co-stat-tile">
+            <div className="co-stat-icon">
+              <svg viewBox="0 0 24 24" strokeWidth="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div>
+              <div className="co-stat-num">{locations.length}</div>
+              <div className="co-stat-label">Locations</div>
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div style={styles.filtersSection}>
-          <h3 style={styles.filtersTitle}>Filter Companies</h3>
-          <div style={styles.filtersGrid}>
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Search</label>
-              <input
-                type="text"
-                name="search"
-                placeholder="Company name"
-                value={filters.search}
-                onChange={handleFilterChange}
-                style={styles.filterInput}
-              />
-            </div>
+        {/* Content */}
+        <div className="co-content">
 
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Industry</label>
-              <select
-                name="industry"
-                value={filters.industry}
-                onChange={handleFilterChange}
-                style={styles.filterSelect}
-              >
-                <option value="">All Industries</option>
-                {industries.map((ind, idx) => (
-                  <option key={idx} value={ind}>{ind}</option>
-                ))}
-              </select>
+          {/* Filters */}
+          <div className="co-filters">
+            <div className="co-filters-head">
+              <span className="co-filters-title">Filter Companies</span>
+              {activeFilterCount > 0 && <span className="co-filter-badge">{activeFilterCount} active</span>}
             </div>
-
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Location</label>
-              <select
-                name="location"
-                value={filters.location}
-                onChange={handleFilterChange}
-                style={styles.filterSelect}
-              >
-                <option value="">All Locations</option>
-                {locations.map((loc, idx) => (
-                  <option key={idx} value={loc}>{loc}</option>
-                ))}
-              </select>
+            <div className="co-filters-grid">
+              <div className="co-filter-group">
+                <label className="co-filter-label">Search</label>
+                <input
+                  type="text" name="search"
+                  placeholder="Company name..."
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  className="co-filter-input"
+                />
+              </div>
+              <div className="co-filter-group">
+                <label className="co-filter-label">Industry</label>
+                <select name="industry" value={filters.industry} onChange={handleFilterChange} className="co-filter-select">
+                  <option value="">All Industries</option>
+                  {industries.map((ind, i) => <option key={i} value={ind}>{ind}</option>)}
+                </select>
+              </div>
+              <div className="co-filter-group">
+                <label className="co-filter-label">Location</label>
+                <select name="location" value={filters.location} onChange={handleFilterChange} className="co-filter-select">
+                  <option value="">All Locations</option>
+                  {locations.map((loc, i) => <option key={i} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+              <button className="co-clear-btn" onClick={clearFilters}>Clear Filters</button>
             </div>
-
-            <button onClick={clearFilters} style={styles.clearBtn}>
-              Clear Filters
-            </button>
           </div>
-        </div>
 
-        {/* Results */}
-        <div>
-          <div style={styles.resultsHeader}>
-            <div style={styles.resultsCount}>
-              Showing <span style={styles.resultsCountStrong}>{filteredCompanies.length}</span> companies
-            </div>
+          {/* Results */}
+          <div className="co-results-bar">
+            <span className="co-count">
+              Showing <strong>{filteredCompanies.length}</strong> {filteredCompanies.length === 1 ? 'company' : 'companies'}
+            </span>
           </div>
 
           {filteredCompanies.length > 0 ? (
-            <div style={styles.companiesGrid}>
-              {filteredCompanies.map(company => (
-                <CompanyCard key={company.id} company={company} />
-              ))}
+            <div className="co-grid">
+              {filteredCompanies.map(company => <CompanyCard key={company.id} company={company} />)}
             </div>
           ) : (
-            <div style={styles.noCompanies}>
+            <div className="co-empty">
+              <div className="co-empty-icon">
+                <svg viewBox="0 0 24 24" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
               <h3>No companies found</h3>
-              <p>Try adjusting your filters</p>
+              <p>{activeFilterCount > 0 ? 'Try adjusting your filters.' : 'No companies have registered yet.'}</p>
             </div>
           )}
         </div>
-      </div>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 };
 

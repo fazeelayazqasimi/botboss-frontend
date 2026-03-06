@@ -11,6 +11,7 @@ import Interview from './pages/Interview';
 import PostJob from './pages/PostJob';
 import Report from './pages/Report';  // Fixed: Changed from PostJob to Report
 import CompanyProfileEdit from './pages/CompanyProfileEdit';
+import MyJobs from './pages/MyJobs';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/company/dashboard" element={<CompanyDashboard />} />
         <Route path="/company/post-job" element={<PostJob />} />
         <Route path="/company/profile/edit" element={<CompanyProfileEdit />} />
+        <Route path="/my-jobs" element={<MyJobs />} />
         <Route path="/job/:id" element={<JobDetails />} />
         <Route path="/my-applications" element={<MyApplications />} />
         <Route path="/interview/:jobId" element={<Interview />} />

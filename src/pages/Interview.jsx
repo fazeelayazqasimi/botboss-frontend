@@ -3,11 +3,334 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
+// ─── Inline SVG Icons (no extra library) ───────────────────────────────────
+const Icon = ({ d, size = 20, color = 'currentColor', strokeWidth = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+const icons = {
+  video:       'M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z',
+  mic:         'M12 1a4 4 0 014 4v6a4 4 0 01-8 0V5a4 4 0 014-4zM8 11a4 4 0 008 0M12 19v4M8 23h8',
+  micOff:      'M1 1l22 22M9 9v3a3 3 0 005.12 2.12M15 9.34V5a3 3 0 00-5.94-.6M17 16.95A7 7 0 015 12v-2m14 0v2a7 7 0 01-.11 1.23M12 19v3M8 23h8',
+  type:        'M4 7V4h16v3M9 20h6M12 4v16',
+  send:        'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  stop:        'M6 6h12v12H6z',
+  check:       'M20 6L9 17l-5-5',
+  alert:       'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
+  plug:        'M18.36 6.64a9 9 0 11-12.73 0M12 2v10',
+  refresh:     'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15',
+  briefcase:   'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
+  clock:       'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6v6l4 2',
+  eye:         'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z',
+  loader:      'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83',
+  info:        'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 16v-4M12 8h.01',
+  arrowRight:  'M5 12h14M12 5l7 7-7 7',
+  star:        'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+};
+
+// ─── Design Tokens ──────────────────────────────────────────────────────────
+const C = {
+  white:       '#FFFFFF',
+  grey50:      '#F8F9FB',
+  grey100:     '#F0F2F7',
+  grey200:     '#E2E6EF',
+  grey400:     '#9CA3B8',
+  grey600:     '#6B7280',
+  grey900:     '#111827',
+  purple:      '#7C3AED',
+  purpleLight: '#EDE9FE',
+  purpleMid:   '#A78BFA',
+  purpleDark:  '#4C1D95',
+  green:       '#059669',
+  greenLight:  '#D1FAE5',
+  red:         '#DC2626',
+  redLight:    '#FEE2E2',
+  amber:       '#D97706',
+  amberLight:  '#FEF3C7',
+  blue:        '#2563EB',
+  blueLight:   '#DBEAFE',
+};
+
+const s = {
+  // Layout
+  page: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    background: C.grey50,
+    fontFamily: "'Poppins', sans-serif",
+  },
+  main: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2rem 1rem',
+  },
+  container: {
+    width: '100%',
+    maxWidth: '780px',
+  },
+
+  // Cards
+  card: {
+    background: C.white,
+    borderRadius: '16px',
+    border: `1px solid ${C.grey200}`,
+    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+    overflow: 'hidden',
+  },
+  cardPad: { padding: '2.5rem' },
+
+  // Chip / Badge
+  chip: (bg, color) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 12px',
+    borderRadius: '999px',
+    background: bg,
+    color: color,
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    letterSpacing: '0.02em',
+  }),
+
+  // Progress bar
+  progressTrack: {
+    height: '4px',
+    background: C.grey100,
+    borderRadius: 0,
+  },
+  progressFill: (pct) => ({
+    height: '100%',
+    width: `${pct}%`,
+    background: `linear-gradient(90deg, ${C.purple}, ${C.purpleMid})`,
+    transition: 'width 0.5s ease',
+    borderRadius: 0,
+  }),
+
+  // Section divider
+  divider: {
+    height: '1px',
+    background: C.grey100,
+    margin: '0',
+  },
+
+  // Typography
+  h1: {
+    fontSize: '1.625rem',
+    fontWeight: 700,
+    color: C.grey900,
+    margin: 0,
+    lineHeight: 1.25,
+  },
+  h2: {
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: C.grey900,
+    margin: 0,
+  },
+  body: {
+    fontSize: '0.9rem',
+    color: C.grey600,
+    lineHeight: 1.65,
+  },
+  label: {
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: C.grey400,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+
+  // Buttons
+  btn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '0 24px',
+    height: '44px',
+    borderRadius: '10px',
+    border: 'none',
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontFamily: "'Poppins', sans-serif",
+    whiteSpace: 'nowrap',
+  },
+  btnPrimary: {
+    background: C.purple,
+    color: C.white,
+    boxShadow: `0 2px 12px ${C.purple}40`,
+  },
+  btnOutline: {
+    background: C.white,
+    color: C.purple,
+    border: `1.5px solid ${C.purple}`,
+  },
+  btnGhost: {
+    background: C.grey100,
+    color: C.grey600,
+    border: `1.5px solid ${C.grey200}`,
+  },
+  btnDanger: {
+    background: C.red,
+    color: C.white,
+    boxShadow: `0 2px 12px ${C.red}30`,
+  },
+  btnSuccess: {
+    background: C.green,
+    color: C.white,
+    boxShadow: `0 2px 12px ${C.green}30`,
+  },
+  btnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+    pointerEvents: 'none',
+  },
+
+  // Question card
+  questionBox: {
+    background: C.grey50,
+    border: `1px solid ${C.grey200}`,
+    borderRadius: '12px',
+    padding: '1.5rem',
+    fontSize: '1.05rem',
+    fontWeight: 500,
+    color: C.grey900,
+    lineHeight: 1.7,
+  },
+
+  // Timer
+  timerBox: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+
+  // Textarea
+  textarea: {
+    width: '100%',
+    padding: '1rem',
+    border: `1.5px solid ${C.grey200}`,
+    borderRadius: '10px',
+    fontSize: '0.9rem',
+    fontFamily: "'Poppins', sans-serif",
+    color: C.grey900,
+    minHeight: '140px',
+    resize: 'vertical',
+    outline: 'none',
+    transition: 'border-color 0.2s',
+    background: C.white,
+    boxSizing: 'border-box',
+  },
+
+  // Video
+  videoWrap: {
+    width: '100%',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    background: C.grey900,
+    position: 'relative',
+    aspectRatio: '16/9',
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+  },
+
+  // Mode tabs
+  tabRow: {
+    display: 'flex',
+    background: C.grey100,
+    borderRadius: '10px',
+    padding: '4px',
+    gap: '4px',
+  },
+  tab: (active) => ({
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '7px',
+    padding: '8px 16px',
+    borderRadius: '7px',
+    border: 'none',
+    background: active ? C.white : 'transparent',
+    color: active ? C.purple : C.grey600,
+    fontWeight: active ? 600 : 500,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+    fontFamily: "'Poppins', sans-serif",
+  }),
+
+  // Status dot
+  dot: (color) => ({
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: color,
+    flexShrink: 0,
+  }),
+
+  // Alert / notice
+  notice: (bg, border, color) => ({
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    padding: '12px 16px',
+    background: bg,
+    border: `1px solid ${border}`,
+    borderRadius: '10px',
+    color: color,
+    fontSize: '0.85rem',
+    lineHeight: 1.55,
+  }),
+
+  // Eye contact overlay
+  eyeOverlay: {
+    position: 'absolute',
+    top: '12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: C.red,
+    color: C.white,
+    padding: '6px 16px',
+    borderRadius: '999px',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    whiteSpace: 'nowrap',
+  },
+
+  // Rec indicator
+  recDot: {
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    background: C.red,
+    animation: 'blink 1.2s ease-in-out infinite',
+  },
+};
+
+// ─── Component ──────────────────────────────────────────────────────────────
 const Interview = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  
-  // State variables
+
   const [user, setUser] = useState(null);
   const [job, setJob] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -21,96 +344,59 @@ const Interview = () => {
   const [eyeContactWarning, setEyeContactWarning] = useState(false);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [answerText, setAnswerText] = useState('');
-  const [inputMode, setInputMode] = useState('text'); // Default to text
+  const [inputMode, setInputMode] = useState('text');
   const [processing, setProcessing] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(true);
-  
-  // Refs
+
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const eyeCheckRef = useRef(null);
-  
+
   const API_URL = 'https://Fazeelayazq-botboss-backend.hf.space';
 
   useEffect(() => {
-    // Check user login
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'candidate') {
-      navigate('/login');
-      return;
-    }
+    if (!userData || userData.type !== 'candidate') { navigate('/login'); return; }
     setUser(userData);
-
-    // Get job details
     const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
     const jobData = jobs.find(j => j.id === parseInt(jobId));
-    if (jobData) {
-      setJob(jobData);
-    } else {
-      navigate('/jobs');
-    }
-
-    // Check backend connection
+    if (jobData) setJob(jobData);
+    else navigate('/jobs');
     checkBackendConnection();
-    
-    // Check if voice is available
     checkVoiceAvailability();
   }, [jobId, navigate]);
 
   const checkVoiceAvailability = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasMic = devices.some(device => device.kind === 'audioinput');
-      setVoiceAvailable(hasMic);
-    } catch (err) {
-      console.log('Voice not available:', err);
-      setVoiceAvailable(false);
-    }
+      setVoiceAvailable(devices.some(d => d.kind === 'audioinput'));
+    } catch { setVoiceAvailable(false); }
   };
 
   const checkBackendConnection = async () => {
     try {
-      const response = await fetch(`${API_URL}/`);
-      if (response.ok) {
-        setBackendStatus('connected');
-        setError('');
-      } else {
-        setBackendStatus('error');
-        setError('Backend server is not responding properly');
-      }
-    } catch (err) {
-      console.error('Backend connection error:', err);
-      setBackendStatus('error');
-      setError('Cannot connect to backend server. Please make sure it\'s running on port 8000');
-    }
+      const r = await fetch(`${API_URL}/`);
+      if (r.ok) { setBackendStatus('connected'); setError(''); }
+      else { setBackendStatus('error'); setError('Backend not responding'); }
+    } catch { setBackendStatus('error'); setError('Cannot connect to backend'); }
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (eyeCheckRef.current) clearInterval(eyeCheckRef.current);
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      }
-    };
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (eyeCheckRef.current) clearInterval(eyeCheckRef.current);
+    if (mediaRecorderRef.current && isRecording)
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
   }, []);
 
-  // Timer for recording
   useEffect(() => {
     if (status === 'recording' && timeLeft > 0) {
-      timerRef.current = setTimeout(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && status === 'recording') {
-      stopRecording();
-    }
+      timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
+    } else if (timeLeft === 0 && status === 'recording') stopRecording();
     return () => clearTimeout(timerRef.current);
   }, [timeLeft, status]);
 
-  // Simulated eye contact check
   useEffect(() => {
     if (status === 'recording') {
       eyeCheckRef.current = setInterval(() => {
@@ -123,865 +409,432 @@ const Interview = () => {
     return () => clearInterval(eyeCheckRef.current);
   }, [status]);
 
-  // Start interview
   const startInterview = async () => {
     try {
-      setStatus('loading');
-      setError('');
-      
-      const response = await fetch(`${API_URL}/interview/start`, {
+      setStatus('loading'); setError('');
+      const r = await fetch(`${API_URL}/interview/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          job_description: job.description
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_description: job.description }),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to start interview: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Interview started:', data);
-      
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json();
       setSessionId(data.session_id);
       setTotalQuestions(data.questions_count || 5);
-      
-      // Get first question
       await getNextQuestion(data.session_id);
-      
-    } catch (error) {
-      console.error('Failed to start interview:', error);
+    } catch (e) {
       setError('Failed to start interview. Please try again.');
       setStatus('initial');
     }
   };
 
-  // Get next question
   const getNextQuestion = async (sid) => {
     try {
-      const response = await fetch(`${API_URL}/interview/next/${sid}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to get question');
-      }
-
-      const data = await response.json();
-      console.log('Next question response:', data);
-      
-      if (data.message === "Interview Completed" || data.status === "completed") {
+      const r = await fetch(`${API_URL}/interview/next/${sid}`);
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      if (data.message === 'Interview Completed' || data.status === 'completed') {
         setStatus('completed');
-        setTimeout(() => {
-          navigate(`/report/${sid}`);
-        }, 2000);
+        setTimeout(() => navigate(`/report/${sid}`), 2000);
       } else {
         setCurrentQuestion(data.question);
         setQuestionNumber(data.question_number);
         setTotalQuestions(data.total_questions || 5);
-        setStatus('ready');
-        setTimeLeft(60);
-        setAnswerText('');
+        setStatus('ready'); setTimeLeft(60); setAnswerText('');
       }
-      
-    } catch (error) {
-      console.error('Failed to get question:', error);
-      setError('Failed to load question. Please try again.');
-      setStatus('ready');
+    } catch {
+      setError('Failed to load question.'); setStatus('ready');
     }
   };
 
-  // Start camera and recording
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       videoRef.current.srcObject = stream;
-      
       mediaRecorderRef.current = new MediaRecorder(stream);
       chunksRef.current = [];
-      
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-      
+      mediaRecorderRef.current.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current.onstop = sendVoiceAnswer;
-      
       mediaRecorderRef.current.start();
-      setIsRecording(true);
-      setStatus('recording');
-      setTimeLeft(60);
-      
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      setError('Camera/Microphone access denied. Please use text mode.');
+      setIsRecording(true); setStatus('recording'); setTimeLeft(60);
+    } catch {
+      setError('Camera access denied. Please use text mode.');
       setInputMode('text');
     }
   };
 
-  // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      setIsRecording(false);
-      setStatus('processing');
-      setProcessing(true);
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      setIsRecording(false); setStatus('processing'); setProcessing(true);
     }
   };
 
-  // Send voice answer
   const sendVoiceAnswer = async () => {
     try {
-      const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
       const formData = new FormData();
-      formData.append('file', audioBlob, 'answer.webm');
-      
-      const response = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send answer');
-      }
-
-      const data = await response.json();
-      console.log('Voice answer saved:', data);
-      
-      if (data.completed) {
-        setStatus('completed');
-        setTimeout(() => {
-          navigate(`/report/${sessionId}`);
-        }, 2000);
-      } else {
-        await getNextQuestion(sessionId);
-      }
-      
-    } catch (error) {
-      console.error('Failed to send voice answer:', error);
+      formData.append('file', new Blob(chunksRef.current, { type: 'audio/webm' }), 'answer.webm');
+      const r = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { method: 'POST', body: formData });
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      if (data.completed) { setStatus('completed'); setTimeout(() => navigate(`/report/${sessionId}`), 2000); }
+      else await getNextQuestion(sessionId);
+    } catch {
       setError('Voice recording failed. Switching to text mode.');
-      setInputMode('text');
-      setStatus('ready');
-    } finally {
-      setProcessing(false);
-    }
+      setInputMode('text'); setStatus('ready');
+    } finally { setProcessing(false); }
   };
 
-  // Send text answer
   const sendTextAnswer = async () => {
-    if (!answerText.trim()) {
-      setError('Please enter your answer');
-      return;
-    }
-
+    if (!answerText.trim()) { setError('Please enter your answer'); return; }
     try {
       setProcessing(true);
-      
-      // Create a text file and send as FormData
-      const textBlob = new Blob([answerText], { type: 'text/plain' });
       const formData = new FormData();
-      formData.append('file', textBlob, 'answer.txt');
-      
-      const response = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to send answer: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Text answer saved:', data);
-      
-      if (data.completed) {
-        setStatus('completed');
-        setTimeout(() => {
-          navigate(`/report/${sessionId}`);
-        }, 2000);
-      } else {
-        await getNextQuestion(sessionId);
-      }
-      
-    } catch (error) {
-      console.error('Failed to send text answer:', error);
-      setError('Failed to submit answer. Please try again.');
-      setStatus('ready');
-    } finally {
-      setProcessing(false);
-    }
+      formData.append('file', new Blob([answerText], { type: 'text/plain' }), 'answer.txt');
+      const r = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { method: 'POST', body: formData });
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json();
+      if (data.completed) { setStatus('completed'); setTimeout(() => navigate(`/report/${sessionId}`), 2000); }
+      else await getNextQuestion(sessionId);
+    } catch {
+      setError('Failed to submit. Please try again.'); setStatus('ready');
+    } finally { setProcessing(false); }
   };
 
-  // Cancel interview
   const cancelInterview = () => {
-    if (window.confirm('Are you sure you want to cancel the interview?')) {
-      navigate('/my-applications');
-    }
+    if (window.confirm('Cancel interview?')) navigate('/my-applications');
   };
 
-  // Toggle input mode
-  const toggleInputMode = (mode) => {
-    setInputMode(mode);
-    setError('');
-  };
+  const timerColor = timeLeft < 10 ? C.red : timeLeft < 20 ? C.amber : C.grey900;
+  const progress = (questionNumber / totalQuestions) * 100;
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    main: {
-      flex: 1,
-      maxWidth: '1000px',
-      margin: '0 auto',
-      padding: '2rem',
-      width: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    card: {
-      background: 'white',
-      borderRadius: '20px',
-      padding: '2rem',
-      boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-      width: '100%'
-    },
-    header: {
-      textAlign: 'center',
-      marginBottom: '2rem'
-    },
-    title: {
-      fontSize: '2rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    subtitle: {
-      color: '#666',
-      fontSize: '1rem'
-    },
-    backendStatus: {
-      padding: '0.5rem',
-      borderRadius: '5px',
-      marginBottom: '1rem',
-      fontSize: '0.9rem',
-      background: backendStatus === 'connected' ? '#4caf5020' : '#f4433620',
-      border: `1px solid ${backendStatus === 'connected' ? '#4caf50' : '#f44336'}`,
-      color: backendStatus === 'connected' ? '#4caf50' : '#f44336',
-      textAlign: 'center'
-    },
-    jobInfo: {
-      background: '#f3f4f6',
-      padding: '1rem',
-      borderRadius: '10px',
-      marginBottom: '2rem',
-      textAlign: 'center'
-    },
-    jobTitle: {
-      fontSize: '1.2rem',
-      color: '#333',
-      marginBottom: '0.25rem'
-    },
-    jobCompany: {
-      color: '#667eea'
-    },
-    questionSection: {
-      textAlign: 'center',
-      marginBottom: '2rem'
-    },
-    questionNumber: {
-      color: '#667eea',
-      fontSize: '1rem',
-      fontWeight: 600,
-      marginBottom: '0.5rem'
-    },
-    questionText: {
-      fontSize: '1.5rem',
-      color: '#333',
-      lineHeight: 1.6,
-      padding: '1rem',
-      background: '#f8f9fa',
-      borderRadius: '10px',
-      marginBottom: '1rem'
-    },
-    timer: {
-      fontSize: '2rem',
-      fontWeight: 'bold',
-      color: timeLeft < 10 ? '#f44336' : '#333',
-      marginBottom: '1rem'
-    },
-    progressBar: {
-      width: '100%',
-      height: '10px',
-      background: '#e5e7eb',
-      borderRadius: '5px',
-      marginBottom: '1rem',
-      overflow: 'hidden'
-    },
-    progressFill: {
-      height: '100%',
-      background: '#667eea',
-      width: `${(questionNumber / totalQuestions) * 100}%`,
-      transition: 'width 0.3s ease'
-    },
-    videoSection: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '1rem',
-      marginBottom: '2rem'
-    },
-    videoContainer: {
-      width: '100%',
-      maxWidth: '640px',
-      borderRadius: '10px',
-      overflow: 'hidden',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-      position: 'relative'
-    },
-    video: {
-      width: '100%',
-      height: 'auto',
-      display: 'block',
-      background: '#000'
-    },
-    eyeContactWarning: {
-      position: 'absolute',
-      top: '1rem',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      background: '#f44336',
-      color: 'white',
-      padding: '0.5rem 1rem',
-      borderRadius: '30px',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      animation: 'pulse 1s infinite'
-    },
-    modeToggle: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: '1rem',
-      marginBottom: '1rem',
-      flexWrap: 'wrap'
-    },
-    modeBtn: {
-      padding: '0.75rem 1.5rem',
-      borderRadius: '30px',
-      border: '2px solid #667eea',
-      background: 'transparent',
-      color: '#667eea',
-      cursor: 'pointer',
-      fontSize: '1rem',
-      fontWeight: 500,
-      transition: 'all 0.3s',
-      minWidth: '150px'
-    },
-    activeMode: {
-      background: '#667eea',
-      color: 'white'
-    },
-    textInputSection: {
-      width: '100%',
-      maxWidth: '640px',
-      margin: '0 auto'
-    },
-    textArea: {
-      width: '100%',
-      padding: '1rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '10px',
-      fontSize: '1rem',
-      minHeight: '150px',
-      marginBottom: '1rem',
-      outline: 'none',
-      fontFamily: 'inherit',
-      resize: 'vertical'
-    },
-    controls: {
-      display: 'flex',
-      gap: '1rem',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-      marginTop: '1rem'
-    },
-    btn: {
-      padding: '0.75rem 2rem',
-      borderRadius: '30px',
-      border: 'none',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      minWidth: '200px'
-    },
-    btnPrimary: {
-      background: '#667eea',
-      color: 'white',
-      ':hover': {
-        background: '#764ba2',
-        transform: 'translateY(-2px)'
-      }
-    },
-    btnSecondary: {
-      background: 'transparent',
-      color: '#667eea',
-      border: '2px solid #667eea'
-    },
-    btnDanger: {
-      background: '#f44336',
-      color: 'white',
-      ':hover': {
-        background: '#d32f2f'
-      }
-    },
-    btnSuccess: {
-      background: '#4caf50',
-      color: 'white',
-      ':hover': {
-        background: '#45a049'
-      }
-    },
-    btnCancel: {
-      background: 'transparent',
-      color: '#666',
-      border: '2px solid #ccc'
-    },
-    btnDisabled: {
-      opacity: 0.5,
-      cursor: 'not-allowed'
-    },
-    statusIndicator: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '0.5rem',
-      marginTop: '1rem',
-      color: '#666'
-    },
-    pulse: {
-      width: '12px',
-      height: '12px',
-      borderRadius: '50%',
-      background: '#4caf50',
-      animation: 'pulse 1.5s infinite'
-    },
-    error: {
-      color: '#f44336',
-      textAlign: 'center',
-      marginTop: '1rem',
-      padding: '1rem',
-      background: '#ffebee',
-      borderRadius: '5px',
-      border: '1px solid #f44336'
-    },
-    warning: {
-      color: '#ff9800',
-      textAlign: 'center',
-      marginTop: '0.5rem',
-      padding: '0.5rem',
-      background: '#fff3e0',
-      borderRadius: '5px',
-      fontSize: '0.9rem'
-    },
-    startScreen: {
-      textAlign: 'center',
-      padding: '2rem'
-    },
-    startIcon: {
-      fontSize: '4rem',
-      marginBottom: '1rem'
-    },
-    startTitle: {
-      fontSize: '1.5rem',
-      color: '#333',
-      marginBottom: '1rem'
-    },
-    startText: {
-      color: '#666',
-      marginBottom: '2rem',
-      lineHeight: 1.6
-    },
-    guidelines: {
-      textAlign: 'left',
-      background: '#f8f9fa',
-      padding: '1.5rem',
-      borderRadius: '10px',
-      marginBottom: '2rem'
-    },
-    guidelineItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      marginBottom: '0.75rem',
-      color: '#4b5563'
-    },
-    loading: {
-      textAlign: 'center',
-      padding: '3rem',
-      color: '#667eea'
-    },
-    completedScreen: {
-      textAlign: 'center',
-      padding: '3rem'
-    },
-    completedIcon: {
-      fontSize: '4rem',
-      marginBottom: '1rem'
-    }
-  };
+  // ── Backend error ────────────────────────────────────────────────────────
+  if (backendStatus === 'error') return (
+    <Page>
+      <CenteredCard>
+        <CenterBlock>
+          <Icon d={icons.plug} size={40} color={C.red} />
+          <h2 style={{ ...s.h2, marginTop: '1rem' }}>Connection Failed</h2>
+          <p style={{ ...s.body, maxWidth: 360, margin: '0.5rem auto 1.5rem' }}>
+            Unable to reach the backend server. Make sure it is running on port 8000.
+          </p>
+          <button style={{ ...s.btn, ...s.btnPrimary }} onClick={checkBackendConnection}>
+            <Icon d={icons.refresh} size={16} color={C.white} />
+            Retry Connection
+          </button>
+        </CenterBlock>
+      </CenteredCard>
+    </Page>
+  );
 
-  // Backend error screen
-  if (backendStatus === 'error') {
-    return (
-      <div style={styles.container}>
-        <Navbar />
-        <main style={styles.main}>
-          <div style={styles.card}>
-            <div style={styles.startScreen}>
-              <div style={styles.startIcon}>🔌</div>
-              <h2 style={styles.startTitle}>Backend Not Connected</h2>
-              <p style={styles.startText}>
-                Cannot connect to the backend server. Please make sure it's running on port 8000.
-              </p>
-              <button 
-                onClick={checkBackendConnection}
-                style={{...styles.btn, ...styles.btnPrimary}}
-              >
-                Retry Connection
-              </button>
-            </div>
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (status === 'loading') return (
+    <Page>
+      <CenteredCard>
+        <CenterBlock>
+          <div style={{ animation: 'spin 1s linear infinite', width: 40, height: 40 }}>
+            <Icon d={icons.loader} size={40} color={C.purple} />
           </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+          <h2 style={{ ...s.h2, marginTop: '1rem' }}>Preparing your interview</h2>
+          <p style={{ ...s.body, marginTop: '0.4rem' }}>AI is generating personalised questions…</p>
+        </CenterBlock>
+      </CenteredCard>
+    </Page>
+  );
 
-  // Initial screen
-  if (status === 'initial') {
-    return (
-      <div style={styles.container}>
-        <Navbar />
-        <main style={styles.main}>
-          <div style={styles.card}>
-            <div style={styles.backendStatus}>
-              ✅ Backend Connected
-            </div>
-            <div style={styles.startScreen}>
-              <div style={styles.startIcon}>🎥</div>
-              <h2 style={styles.startTitle}>AI Interview</h2>
-              
-              {job && (
-                <div style={styles.jobInfo}>
-                  <div style={styles.jobTitle}>{job.title}</div>
-                  <div style={styles.jobCompany}>{job.company}</div>
-                </div>
-              )}
+  // ── Completed ─────────────────────────────────────────────────────────────
+  if (status === 'completed') return (
+    <Page>
+      <CenteredCard>
+        <CenterBlock>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: C.greenLight,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+            <Icon d={icons.check} size={30} color={C.green} strokeWidth={2.5} />
+          </div>
+          <h2 style={{ ...s.h2, marginTop: '1.25rem' }}>Interview Complete</h2>
+          <p style={{ ...s.body, marginTop: '0.4rem' }}>
+            Generating your performance report…
+          </p>
+          <div style={{ ...s.chip(C.purpleLight, C.purple), marginTop: '1rem' }}>
+            <Icon d={icons.arrowRight} size={13} color={C.purple} />
+            Redirecting to report
+          </div>
+        </CenterBlock>
+      </CenteredCard>
+    </Page>
+  );
 
-              <div style={styles.guidelines}>
-                <h3 style={{marginBottom: '1rem'}}>Guidelines:</h3>
-                <div style={styles.guidelineItem}>
-                  <span>🎯</span> <span>5 questions based on job description</span>
-                </div>
-                <div style={styles.guidelineItem}>
-                  <span>⏱️</span> <span>60 seconds per question</span>
-                </div>
-                <div style={styles.guidelineItem}>
-                  <span>👁️</span> <span>Maintain eye contact with camera</span>
-                </div>
-                <div style={styles.guidelineItem}>
-                  <span>📝</span> <span><strong>Text mode is recommended</strong> - Type your answers</span>
-                </div>
-                <div style={styles.guidelineItem}>
-                  <span>🎤</span> <span>Voice mode available (experimental)</span>
-                </div>
+  // ── Initial / Start ───────────────────────────────────────────────────────
+  if (status === 'initial') return (
+    <Page>
+      <div style={s.container}>
+        <div style={s.card}>
+          {/* Top accent strip */}
+          <div style={{ height: 5, background: `linear-gradient(90deg, ${C.purple}, ${C.purpleMid})` }} />
+          <div style={s.cardPad}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={s.label}>AI Interview</div>
+                <h1 style={{ ...s.h1, marginTop: '4px' }}>
+                  {job ? job.title : 'Interview Session'}
+                </h1>
+                {job && <div style={{ ...s.body, color: C.purple, fontWeight: 600, marginTop: '2px' }}>{job.company}</div>}
               </div>
+              <div style={{ ...s.chip(C.greenLight, C.green) }}>
+                <div style={{ ...s.dot(C.green) }} />
+                Server Connected
+              </div>
+            </div>
 
-              <button 
-                onClick={startInterview}
-                style={{...styles.btn, ...styles.btnPrimary}}
-              >
+            <div style={s.divider} />
+
+            {/* Guidelines */}
+            <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ ...s.label, marginBottom: '1rem' }}>Before you begin</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {[
+                  { icon: icons.star,      text: '5 AI-generated questions tailored to the role' },
+                  { icon: icons.clock,     text: '60 seconds per question to share your answer' },
+                  { icon: icons.eye,       text: 'Maintain eye contact with the camera throughout' },
+                  { icon: icons.type,      text: 'Text mode recommended for most reliable results' },
+                ].map((g, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px',
+                    padding: '12px 14px', borderRadius: '10px', background: C.grey50,
+                    border: `1px solid ${C.grey100}` }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '8px', background: C.purpleLight,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon d={g.icon} size={16} color={C.purple} />
+                    </div>
+                    <span style={{ ...s.body, fontSize: '0.82rem', marginTop: '2px' }}>{g.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={s.divider} />
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button style={{ ...s.btn, ...s.btnGhost }} onClick={() => navigate('/jobs')}>
+                Back to Jobs
+              </button>
+              <button style={{ ...s.btn, ...s.btnPrimary }} onClick={startInterview}>
                 Start Interview
+                <Icon d={icons.arrowRight} size={16} color={C.white} />
               </button>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Loading screen
-  if (status === 'loading') {
-    return (
-      <div style={styles.container}>
-        <Navbar />
-        <main style={styles.main}>
-          <div style={styles.card}>
-            <div style={styles.loading}>
-              <div style={{fontSize: '2rem', marginBottom: '1rem'}}>⏳</div>
-              <h3>Starting interview...</h3>
-              <p style={{color: '#666'}}>Please wait while AI generates questions</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Completed screen
-  if (status === 'completed') {
-    return (
-      <div style={styles.container}>
-        <Navbar />
-        <main style={styles.main}>
-          <div style={styles.card}>
-            <div style={styles.completedScreen}>
-              <div style={styles.completedIcon}>✅</div>
-              <h2>Interview Completed!</h2>
-              <p style={{color: '#666', marginTop: '1rem'}}>
-                Generating your report...
-              </p>
-              <p style={{color: '#667eea', marginTop: '0.5rem'}}>
-                Redirecting to report page
-              </p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Main interview screen
-  return (
-    <div style={styles.container}>
-      <Navbar />
-      <main style={styles.main}>
-        <div style={styles.card}>
-          {/* Progress Bar */}
-          <div style={styles.progressBar}>
-            <div style={styles.progressFill}></div>
-          </div>
-
-          {/* Header */}
-          <div style={styles.header}>
-            <h1 style={styles.title}>AI Interview</h1>
-            <p style={styles.subtitle}>
-              Question {questionNumber} of {totalQuestions}
-            </p>
-          </div>
-
-          {/* Job Info */}
-          {job && (
-            <div style={styles.jobInfo}>
-              <div style={styles.jobTitle}>{job.title}</div>
-              <div style={styles.jobCompany}>{job.company}</div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && <div style={styles.error}>{error}</div>}
-
-          {/* Question Section */}
-          <div style={styles.questionSection}>
-            <div style={styles.questionNumber}>Current Question</div>
-            <div style={styles.questionText}>{currentQuestion}</div>
-            
-            {status === 'recording' && (
-              <div style={styles.timer}>
-                {timeLeft} seconds left
-              </div>
-            )}
-          </div>
-
-          {/* Video Section */}
-          <div style={styles.videoSection}>
-            <div style={styles.videoContainer}>
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                muted 
-                style={styles.video}
-              />
-              {eyeContactWarning && (
-                <div style={styles.eyeContactWarning}>
-                  ⚠️ Please look at the camera
-                </div>
-              )}
-            </div>
-
-            {/* Mode Indicator */}
-            <div style={{
-              padding: '0.5rem 1rem',
-              background: inputMode === 'text' ? '#2196f320' : '#ff980020',
-              borderRadius: '20px',
-              color: inputMode === 'text' ? '#2196f3' : '#ff9800',
-              fontWeight: 500
-            }}>
-              {inputMode === 'text' ? '📝 Text Mode Active' : '🎤 Voice Mode Active'}
-            </div>
-
-            {/* Mode Toggle */}
-            {status === 'ready' && !processing && (
-              <div style={styles.modeToggle}>
-                <button 
-                  onClick={() => toggleInputMode('text')}
-                  style={{
-                    ...styles.modeBtn,
-                    ...(inputMode === 'text' ? styles.activeMode : {})
-                  }}
-                >
-                  📝 Text Mode (Recommended)
-                </button>
-                {voiceAvailable && (
-                  <button 
-                    onClick={() => toggleInputMode('voice')}
-                    style={{
-                      ...styles.modeBtn,
-                      ...(inputMode === 'voice' ? styles.activeMode : {})
-                    }}
-                  >
-                    🎤 Voice Mode
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Text Input Section */}
-            {status === 'ready' && inputMode === 'text' && !processing && (
-              <div style={styles.textInputSection}>
-                <textarea
-                  style={styles.textArea}
-                  placeholder="Type your answer here... (detailed answers get better scores)"
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                />
-                <div style={{textAlign: 'left', color: '#666', fontSize: '0.9rem'}}>
-                  💡 Tip: Write 3-4 sentences for best score
-                </div>
-              </div>
-            )}
-
-            {/* Voice Mode Warning */}
-            {status === 'ready' && inputMode === 'voice' && (
-              <div style={styles.warning}>
-                ⚠️ Voice mode is experimental. If it doesn't work, switch to text mode.
-              </div>
-            )}
-
-            {/* Controls */}
-            <div style={styles.controls}>
-              {status === 'ready' && inputMode === 'voice' && !processing && (
-                <>
-                  <button 
-                    onClick={startRecording}
-                    style={{...styles.btn, ...styles.btnPrimary}}
-                  >
-                    🎤 Start Recording
-                  </button>
-                  <button 
-                    onClick={cancelInterview}
-                    style={{...styles.btn, ...styles.btnCancel}}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-
-              {status === 'ready' && inputMode === 'text' && !processing && (
-                <>
-                  <button 
-                    onClick={sendTextAnswer}
-                    style={{...styles.btn, ...styles.btnSuccess}}
-                    disabled={!answerText.trim()}
-                  >
-                    📝 Submit Answer
-                  </button>
-                  <button 
-                    onClick={cancelInterview}
-                    style={{...styles.btn, ...styles.btnCancel}}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-              
-              {status === 'recording' && (
-                <button 
-                  onClick={stopRecording}
-                  style={{...styles.btn, ...styles.btnDanger}}
-                >
-                  ⏹ Stop Recording
-                </button>
-              )}
-              
-              {(status === 'processing' || processing) && (
-                <button 
-                  style={{...styles.btn, ...styles.btnSecondary, ...styles.btnDisabled}}
-                  disabled
-                >
-                  ⏳ Processing...
-                </button>
-              )}
-            </div>
-
-            {/* Status Indicator */}
-            <div style={styles.statusIndicator}>
-              {status === 'ready' && inputMode === 'text' && !processing && (
-                <>
-                  <div style={{...styles.pulse, background: '#2196f3'}}></div>
-                  <span>Ready - Type your answer</span>
-                </>
-              )}
-              {status === 'ready' && inputMode === 'voice' && !processing && (
-                <>
-                  <div style={{...styles.pulse, background: '#ff9800'}}></div>
-                  <span>Ready - Click Start Recording</span>
-                </>
-              )}
-              {status === 'recording' && (
-                <>
-                  <div style={{...styles.pulse, background: '#f44336'}}></div>
-                  <span>Recording... Speak clearly</span>
-                </>
-              )}
-              {(status === 'processing' || processing) && (
-                <>
-                  <div style={{...styles.pulse, background: '#4caf50'}}></div>
-                  <span>Saving your answer...</span>
-                </>
-              )}
             </div>
           </div>
         </div>
-      </main>
-      <Footer />
+      </div>
+    </Page>
+  );
 
-      <style>
-        {`
-          @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.1); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-        `}
-      </style>
-    </div>
+  // ── Main interview ────────────────────────────────────────────────────────
+  return (
+    <Page>
+      <div style={s.container}>
+        <div style={s.card}>
+          {/* Progress */}
+          <div style={s.progressTrack}>
+            <div style={s.progressFill(progress)} />
+          </div>
+
+          <div style={s.cardPad}>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={s.label}>Question {questionNumber} of {totalQuestions}</div>
+                {job && <div style={{ ...s.body, fontWeight: 600, color: C.purple, fontSize: '0.85rem', marginTop: '2px' }}>
+                  {job.title} — {job.company}
+                </div>}
+              </div>
+              {/* Timer pill */}
+              {status === 'recording' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '6px 14px', borderRadius: '999px',
+                  background: timeLeft < 10 ? C.redLight : C.grey100,
+                  border: `1.5px solid ${timeLeft < 10 ? C.red : C.grey200}` }}>
+                  <div style={{ ...s.recDot }} />
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: timerColor, fontVariantNumeric: 'tabular-nums' }}>
+                    {timeLeft}s
+                  </span>
+                </div>
+              )}
+              {status !== 'recording' && (
+                <div style={{ ...s.chip(C.grey100, C.grey600) }}>
+                  <Icon d={icons.clock} size={13} color={C.grey600} />
+                  60 sec / question
+                </div>
+              )}
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={{ ...s.notice(C.redLight, `${C.red}50`, C.red), marginBottom: '1.25rem' }}>
+                <Icon d={icons.alert} size={16} color={C.red} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Question */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ ...s.label, marginBottom: '8px' }}>Current Question</div>
+              <div style={s.questionBox}>{currentQuestion}</div>
+            </div>
+
+            <div style={s.divider} />
+            <div style={{ marginTop: '1.5rem' }}>
+
+              {/* Video feed (always shown when recording, else smaller preview) */}
+              {(status === 'recording' || inputMode === 'voice') && (
+                <div style={{ ...s.videoWrap, marginBottom: '1.25rem' }}>
+                  <video ref={videoRef} autoPlay muted style={s.video} />
+                  {eyeContactWarning && (
+                    <div style={s.eyeOverlay}>
+                      <Icon d={icons.eye} size={13} color={C.white} />
+                      Look at the camera
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mode tabs */}
+              {status === 'ready' && !processing && (
+                <div style={{ ...s.tabRow, marginBottom: '1.25rem' }}>
+                  <button style={s.tab(inputMode === 'text')} onClick={() => { setInputMode('text'); setError(''); }}>
+                    <Icon d={icons.type} size={15} color={inputMode === 'text' ? C.purple : C.grey600} />
+                    Text Mode
+                  </button>
+                  {voiceAvailable && (
+                    <button style={s.tab(inputMode === 'voice')} onClick={() => { setInputMode('voice'); setError(''); }}>
+                      <Icon d={icons.mic} size={15} color={inputMode === 'voice' ? C.purple : C.grey600} />
+                      Voice Mode
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Text input */}
+              {status === 'ready' && inputMode === 'text' && !processing && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <textarea
+                    style={s.textarea}
+                    placeholder="Type your answer here. Aim for 3–4 sentences for the best score."
+                    value={answerText}
+                    onChange={e => setAnswerText(e.target.value)}
+                    onFocus={e => e.target.style.borderColor = C.purple}
+                    onBlur={e => e.target.style.borderColor = C.grey200}
+                  />
+                  <div style={{ ...s.body, fontSize: '0.78rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon d={icons.info} size={13} color={C.grey400} />
+                    Detailed, structured answers receive higher scores
+                  </div>
+                </div>
+              )}
+
+              {/* Voice warning */}
+              {status === 'ready' && inputMode === 'voice' && !processing && (
+                <div style={{ ...s.notice(C.amberLight, `${C.amber}60`, C.amber), marginBottom: '1rem' }}>
+                  <Icon d={icons.alert} size={16} color={C.amber} />
+                  <span>Voice mode is experimental. Switch to text if recording fails.</span>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                {/* Cancel always visible when ready */}
+                {(status === 'ready') && !processing && (
+                  <button style={{ ...s.btn, ...s.btnGhost }} onClick={cancelInterview}>
+                    Cancel
+                  </button>
+                )}
+
+                {status === 'ready' && inputMode === 'voice' && !processing && (
+                  <button style={{ ...s.btn, ...s.btnPrimary }} onClick={startRecording}>
+                    <Icon d={icons.mic} size={16} color={C.white} />
+                    Start Recording
+                  </button>
+                )}
+
+                {status === 'ready' && inputMode === 'text' && !processing && (
+                  <button
+                    style={{ ...s.btn, ...s.btnPrimary, ...(answerText.trim() ? {} : s.btnDisabled) }}
+                    onClick={sendTextAnswer}
+                    disabled={!answerText.trim()}
+                  >
+                    Submit Answer
+                    <Icon d={icons.send} size={15} color={C.white} />
+                  </button>
+                )}
+
+                {status === 'recording' && (
+                  <button style={{ ...s.btn, ...s.btnDanger }} onClick={stopRecording}>
+                    <Icon d={icons.stop} size={15} color={C.white} />
+                    Stop Recording
+                  </button>
+                )}
+
+                {(status === 'processing' || processing) && (
+                  <button style={{ ...s.btn, ...s.btnOutline, ...s.btnDisabled }} disabled>
+                    <div style={{ animation: 'spin 1s linear infinite' }}>
+                      <Icon d={icons.loader} size={15} color={C.purple} />
+                    </div>
+                    Processing…
+                  </button>
+                )}
+              </div>
+
+              {/* Status line */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                {status === 'ready' && inputMode === 'text' && !processing && (
+                  <><div style={s.dot(C.blue)} /><span style={{ ...s.body, fontSize: '0.78rem' }}>Ready — type your answer above</span></>
+                )}
+                {status === 'ready' && inputMode === 'voice' && !processing && (
+                  <><div style={s.dot(C.amber)} /><span style={{ ...s.body, fontSize: '0.78rem' }}>Ready — click Start Recording</span></>
+                )}
+                {status === 'recording' && (
+                  <><div style={{ ...s.dot(C.red), animation: 'blink 1s ease-in-out infinite' }} /><span style={{ ...s.body, fontSize: '0.78rem' }}>Recording — speak clearly</span></>
+                )}
+                {(status === 'processing' || processing) && (
+                  <><div style={s.dot(C.green)} /><span style={{ ...s.body, fontSize: '0.78rem' }}>Saving your answer…</span></>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        button:hover { filter: brightness(0.94); }
+      `}</style>
+    </Page>
   );
 };
+
+// ─── Layout helpers ──────────────────────────────────────────────────────────
+const Page = ({ children }) => (
+  <div style={s.page}>
+    <Navbar />
+    <main style={s.main}>{children}</main>
+    <Footer />
+  </div>
+);
+
+const CenteredCard = ({ children }) => (
+  <div style={{ ...s.container, maxWidth: 480 }}>
+    <div style={s.card}>
+      <div style={{ height: 5, background: `linear-gradient(90deg, ${C.purple}, ${C.purpleMid})` }} />
+      <div style={s.cardPad}>{children}</div>
+    </div>
+  </div>
+);
+
+const CenterBlock = ({ children }) => (
+  <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>{children}</div>
+);
 
 export default Interview;

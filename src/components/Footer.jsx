@@ -1,105 +1,201 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const Icon = ({ d, size = 15, color = 'currentColor', sw = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+const ic = {
+  linkedin:   'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z',
+  twitter:    'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z',
+  github:     'M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22',
+  arrowRight: 'M5 12h14M12 5l7 7-7 7',
+  zap:        'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  mail:       'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6',
+};
+
+// ─── Tokens ───────────────────────────────────────────────────────────────────
+const C = {
+  purple:     '#7C3AED',
+  purpleLight:'#A78BFA',
+  purpleDark: '#4C1D95',
+  grey900:    '#0F172A',
+  grey800:    '#1E293B',
+  grey700:    '#334155',
+  grey500:    '#64748B',
+  grey400:    '#94A3B8',
+  grey300:    '#CBD5E1',
+  white:      '#FFFFFF',
+};
+
+const font = "'Poppins', sans-serif";
+
+const footerLink = {
+  color: C.grey400,
+  textDecoration: 'none',
+  fontSize: '0.845rem',
+  fontFamily: font,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  transition: 'color 0.15s',
+  lineHeight: 1,
+};
+
+const colLabel = {
+  fontSize: '0.7rem',
+  fontWeight: 700,
+  color: C.grey500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.1em',
+  marginBottom: 14,
+  display: 'block',
+};
+
+const Dot = () => (
+  <span style={{ width: 3, height: 3, borderRadius: '50%', background: C.grey700,
+    display: 'inline-block', margin: '0 8px', verticalAlign: 'middle' }} />
+);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const Footer = () => {
-  const styles = {
-    footer: {
-      background: '#2d3748',
-      color: 'white',
-      padding: '3rem 0 1rem'
+  const cols = [
+    {
+      label: 'Platform',
+      links: [
+        { to: '/',         label: 'Home' },
+        { to: '/jobs',     label: 'Browse Jobs' },
+        { to: '/companies',label: 'Companies' },
+        { to: '/about',    label: 'About Us' },
+        { to: '/contact',  label: 'Contact' },
+      ],
     },
-    container: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '0 2rem',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '2rem'
+    {
+      label: 'Candidates',
+      links: [
+        { to: '/signup?type=candidate', label: 'Create Account' },
+        { to: '/jobs',                  label: 'Find Jobs' },
+        { to: '/interview-tips',        label: 'Interview Tips' },
+        { to: '/faq',                   label: 'FAQ' },
+      ],
     },
-    section: {
-      marginBottom: '1.5rem'
+    {
+      label: 'Companies',
+      links: [
+        { to: '/signup?type=company', label: 'Post a Job' },
+        { to: '/pricing',             label: 'Pricing' },
+        { to: '/solutions',           label: 'Solutions' },
+        { to: '/contact',             label: 'Contact Sales' },
+      ],
     },
-    heading: {
-      fontSize: '1.2rem',
-      marginBottom: '1rem',
-      color: '#ffd700'
-    },
-    description: {
-      color: '#cbd5e0',
-      lineHeight: 1.6
-    },
-    linkList: {
-      listStyle: 'none',
-      padding: 0,
-      margin: 0
-    },
-    linkItem: {
-      marginBottom: '0.5rem'
-    },
-    link: {
-      color: '#cbd5e0',
-      textDecoration: 'none',
-      transition: 'color 0.3s',
-      cursor: 'pointer',
-      ':hover': {
-        color: '#ffd700'
-      }
-    },
-    bottom: {
-      textAlign: 'center',
-      padding: '2rem 2rem 0',
-      marginTop: '2rem',
-      borderTop: '1px solid #4a5568',
-      color: '#a0aec0'
-    }
-  };
+  ];
 
   return (
-    <footer style={styles.footer}>
-      <div style={styles.container}>
-        <div style={styles.section}>
-          <h3 style={styles.heading}>AI Interview Platform</h3>
-          <p style={styles.description}>
-            Revolutionizing job interviews with AI technology. 
-            Connect with top talent and companies through intelligent interviews.
+    <footer style={{ background: C.grey900, fontFamily: font }}>
+
+      {/* ── Top accent ── */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${C.purpleDark}, ${C.purple}, ${C.purpleLight})` }} />
+
+      {/* ── Main grid ── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 1.5rem 2rem',
+        display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '2.5rem',
+        flexWrap: 'wrap' }}>
+
+        {/* Brand column */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8,
+              background: `linear-gradient(135deg, ${C.purpleDark}, ${C.purple})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon d={ic.zap} size={16} color={C.white} sw={2} />
+            </div>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: C.white, letterSpacing: '-0.01em' }}>
+              AI Interview
+            </span>
+          </div>
+          <p style={{ fontSize: '0.845rem', color: C.grey400, lineHeight: 1.75,
+            maxWidth: 280, margin: '0 0 1.5rem' }}>
+            Connecting top talent with great companies through intelligent, AI-powered interview experiences.
           </p>
+          {/* Social icons */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { icon: ic.linkedin, href: '#', label: 'LinkedIn' },
+              { icon: ic.twitter,  href: '#', label: 'Twitter'  },
+              { icon: ic.github,   href: '#', label: 'GitHub'   },
+              { icon: ic.mail,     href: '#', label: 'Email'    },
+            ].map(({ icon, href, label }) => (
+              <a key={label} href={href} aria-label={label}
+                style={{ width: 34, height: 34, borderRadius: 8,
+                  background: C.grey800, border: `1px solid ${C.grey700}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'border-color 0.15s, background 0.15s', textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.background = C.grey700; e.currentTarget.style.borderColor = C.purple; }}
+                onMouseLeave={e => { e.currentTarget.style.background = C.grey800; e.currentTarget.style.borderColor = C.grey700; }}>
+                <Icon d={icon} size={14} color={C.grey400} />
+              </a>
+            ))}
+          </div>
         </div>
 
-        <div style={styles.section}>
-          <h4 style={styles.heading}>Quick Links</h4>
-          <ul style={styles.linkList}>
-            <li style={styles.linkItem}><Link to="/" style={styles.link}>Home</Link></li>
-            <li style={styles.linkItem}><Link to="/jobs" style={styles.link}>Jobs</Link></li>
-            <li style={styles.linkItem}><Link to="/companies" style={styles.link}>Companies</Link></li>
-            <li style={styles.linkItem}><Link to="/about" style={styles.link}>About Us</Link></li>
-            <li style={styles.linkItem}><Link to="/contact" style={styles.link}>Contact</Link></li>
-          </ul>
-        </div>
+        {/* Link columns */}
+        {cols.map(col => (
+          <div key={col.label}>
+            <span style={colLabel}>{col.label}</span>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {col.links.map(({ to, label }) => (
+                <li key={label}>
+                  <Link to={to} style={footerLink}
+                    onMouseEnter={e => e.currentTarget.style.color = C.white}
+                    onMouseLeave={e => e.currentTarget.style.color = C.grey400}>
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
 
-        <div style={styles.section}>
-          <h4 style={styles.heading}>For Candidates</h4>
-          <ul style={styles.linkList}>
-            <li style={styles.linkItem}><Link to="/signup?type=candidate" style={styles.link}>Create Account</Link></li>
-            <li style={styles.linkItem}><Link to="/jobs" style={styles.link}>Browse Jobs</Link></li>
-            <li style={styles.linkItem}><Link to="/interview-tips" style={styles.link}>Interview Tips</Link></li>
-            <li style={styles.linkItem}><Link to="/faq" style={styles.link}>FAQ</Link></li>
-          </ul>
-        </div>
+      {/* ── Divider ── */}
+      <div style={{ height: 1, background: C.grey800, margin: '0 1.5rem' }} />
 
-        <div style={styles.section}>
-          <h4 style={styles.heading}>For Companies</h4>
-          <ul style={styles.linkList}>
-            <li style={styles.linkItem}><Link to="/signup?type=company" style={styles.link}>Post a Job</Link></li>
-            <li style={styles.linkItem}><Link to="/pricing" style={styles.link}>Pricing</Link></li>
-            <li style={styles.linkItem}><Link to="/solutions" style={styles.link}>Solutions</Link></li>
-            <li style={styles.linkItem}><Link to="/contact" style={styles.link}>Contact Sales</Link></li>
-          </ul>
+      {/* ── Bottom bar ── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.25rem 1.5rem',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: '0.75rem' }}>
+        <p style={{ fontSize: '0.78rem', color: C.grey500, margin: 0 }}>
+          &copy; 2026 AI Interview Platform. All rights reserved.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0,
+          fontSize: '0.78rem', color: C.grey500 }}>
+          <Link to="/privacy" style={{ ...footerLink, fontSize: '0.78rem', color: C.grey500 }}
+            onMouseEnter={e => e.currentTarget.style.color = C.grey300}
+            onMouseLeave={e => e.currentTarget.style.color = C.grey500}>
+            Privacy Policy
+          </Link>
+          <Dot />
+          <Link to="/terms" style={{ ...footerLink, fontSize: '0.78rem', color: C.grey500 }}
+            onMouseEnter={e => e.currentTarget.style.color = C.grey300}
+            onMouseLeave={e => e.currentTarget.style.color = C.grey500}>
+            Terms of Service
+          </Link>
+          <Dot />
+          <Link to="/cookies" style={{ ...footerLink, fontSize: '0.78rem', color: C.grey500 }}
+            onMouseEnter={e => e.currentTarget.style.color = C.grey300}
+            onMouseLeave={e => e.currentTarget.style.color = C.grey500}>
+            Cookies
+          </Link>
         </div>
       </div>
 
-      <div style={styles.bottom}>
-        <p>&copy; 2026 AI Interview Platform. All rights reserved. Made with ❤️ in India</p>
-      </div>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+      `}</style>
     </footer>
   );
 };
