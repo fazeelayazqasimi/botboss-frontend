@@ -38,6 +38,7 @@ const ic = {
   info:       'M12 2a10 10 0 100 20A10 10 0 0012 2zM12 16v-4M12 8h.01',
   inbox:      'M22 12h-6l-2 3H10l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z',
   toggleOn:   'M23 12a11 11 0 01-11 11A11 11 0 011 12 11 11 0 0112 1a11 11 0 0111 11zM18 12a6 6 0 01-6 6 6 6 0 01-6-6 6 6 0 016-6 6 6 0 016 6z',
+  starFill:   'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
 };
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
@@ -157,7 +158,26 @@ const CompanyDashboard = () => {
       setCompanyJobs(cJobs);
 
       const allApps  = JSON.parse(localStorage.getItem('applications') || '[]');
-      const cApps    = allApps.filter(a => cJobs.some(j => j.id === a.jobId));
+      let cApps    = allApps.filter(a => cJobs.some(j => j.id === a.jobId));
+      
+      // ===== AUTO-SHORTLIST: CV Score ≥ 50% =====
+      cApps = cApps.map(app => {
+        // If CV score >= 50 and status is still 'Applied', auto-shortlist
+        if (app.cvScore >= 50 && app.status === 'Applied') {
+          console.log(`Auto-shortlisting ${app.candidateName} for ${app.jobTitle} (CV Score: ${app.cvScore}%)`);
+          return { ...app, status: 'Shortlisted' };
+        }
+        return app;
+      });
+      
+      // Save auto-shortlisted applications back to localStorage
+      const allOriginalApps = JSON.parse(localStorage.getItem('applications') || '[]');
+      const updatedApps = allOriginalApps.map(originalApp => {
+        const updated = cApps.find(a => a.id === originalApp.id);
+        return updated || originalApp;
+      });
+      localStorage.setItem('applications', JSON.stringify(updatedApps));
+      
       setApplications(cApps);
 
       const allInts  = JSON.parse(localStorage.getItem('interviews') || '[]');
@@ -262,7 +282,7 @@ const CompanyDashboard = () => {
     { icon: ic.users,     label: 'Applications',   value: stats.totalApplications,
       iconBg: C.purpleLight, iconColor: C.purple },
     { icon: ic.star,      label: 'Shortlisted',    value: stats.shortlisted,
-      iconBg: C.amberLight,  iconColor: C.amber },
+      iconBg: C.greenLight,  iconColor: C.green },
     { icon: ic.video,     label: 'Interviews',     value: stats.interviews,
       iconBg: '#F3E8FF',     iconColor: C.purpleDark },
     { icon: ic.check,     label: 'Completed',      value: stats.completed,
@@ -400,7 +420,7 @@ const CompanyDashboard = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Applied','Status','Interview','Actions'].map(h => (
+                        {['Candidate','Job','Applied','CV Score','Status','Interview','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -410,6 +430,7 @@ const CompanyDashboard = () => {
                         const interview = interviews.find(i => i.applicationId === app.id);
                         const report    = interview ? getReportForInterview(interview.id) : null;
                         const [sBg, sCol] = statusStyle(app.status);
+                        const isAutoShortlisted = app.cvScore >= 50 && app.status === 'Shortlisted' && !app.manuallyShortlisted;
                         return (
                           <tr key={app.id} style={{ transition: 'background 0.1s' }}
                             onMouseEnter={e => e.currentTarget.style.background = C.grey50}
@@ -420,7 +441,21 @@ const CompanyDashboard = () => {
                               {new Date(app.appliedDate).toLocaleDateString()}
                             </td>
                             <td style={td}>
-                              <span style={chip(sBg, sCol)}>{app.status}</span>
+                              {app.cvScore !== undefined ? (
+                                <span style={chip(scoreBg(app.cvScore), scoreColor(app.cvScore))}>
+                                  {app.cvScore}%
+                                </span>
+                              ) : <span style={{ color: C.grey400 }}>—</span>}
+                            </td>
+                            <td style={td}>
+                              <span style={chip(sBg, sCol)}>
+                                {app.status}
+                                {isAutoShortlisted && (
+                                  <span style={{ marginLeft: 4, fontSize: '0.65rem', background: 'rgba(255,255,255,0.3)', padding: '2px 4px', borderRadius: 4 }}>
+                                    Auto
+                                  </span>
+                                )}
+                              </span>
                             </td>
                             <td style={td}>
                               {interview
@@ -540,10 +575,10 @@ const CompanyDashboard = () => {
               </SectionHead>
               {filteredApplications.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Applied','Status','Interview','Score','Actions'].map(h => (
+                        {['Candidate','Job','Applied','CV Score','Status','Interview','Score','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -553,6 +588,7 @@ const CompanyDashboard = () => {
                         const interview = interviews.find(i => i.applicationId === app.id);
                         const report    = interview ? getReportForInterview(interview.id) : null;
                         const [sBg, sCol] = statusStyle(app.status);
+                        const isAutoShortlisted = app.cvScore >= 50 && app.status === 'Shortlisted' && !app.manuallyShortlisted;
                         return (
                           <tr key={app.id}
                             onMouseEnter={e => e.currentTarget.style.background = C.grey50}
@@ -563,18 +599,32 @@ const CompanyDashboard = () => {
                               {new Date(app.appliedDate).toLocaleDateString()}
                             </td>
                             <td style={td}>
-                              <select
-                                value={app.status}
-                                onChange={e => updateApplicationStatus(app.id, e.target.value)}
-                                style={{ fontFamily: font, fontSize: '0.78rem', fontWeight: 600,
-                                  padding: '4px 8px', borderRadius: 6,
-                                  background: sBg, color: sCol,
-                                  border: `1px solid ${sCol}40`, cursor: 'pointer', outline: 'none' }}>
-                                {['Applied','Under Review','Shortlisted','Interview Scheduled',
-                                  'Interview Completed','Rejected','Hired'].map(s => (
-                                  <option key={s} value={s}>{s}</option>
-                                ))}
-                              </select>
+                              {app.cvScore !== undefined ? (
+                                <span style={chip(scoreBg(app.cvScore), scoreColor(app.cvScore))}>
+                                  {app.cvScore}%
+                                </span>
+                              ) : <span style={{ color: C.grey400 }}>—</span>}
+                            </td>
+                            <td style={td}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <select
+                                  value={app.status}
+                                  onChange={e => updateApplicationStatus(app.id, e.target.value)}
+                                  style={{ fontFamily: font, fontSize: '0.78rem', fontWeight: 600,
+                                    padding: '4px 8px', borderRadius: 6,
+                                    background: sBg, color: sCol,
+                                    border: `1px solid ${sCol}40`, cursor: 'pointer', outline: 'none' }}>
+                                  {['Applied','Under Review','Shortlisted','Interview Scheduled',
+                                    'Interview Completed','Rejected','Hired'].map(s => (
+                                    <option key={s} value={s}>{s}</option>
+                                  ))}
+                                </select>
+                                {isAutoShortlisted && (
+                                  <span style={{ fontSize: '0.65rem', background: C.greenLight, color: C.green, padding: '2px 6px', borderRadius: 12 }}>
+                                    Auto
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td style={td}>
                               {interview ? (

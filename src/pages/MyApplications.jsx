@@ -17,7 +17,10 @@ const MyApplications = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'candidate') { navigate('/login'); return; }
+    if (!userData || userData.type !== 'candidate') { 
+      navigate('/login'); 
+      return; 
+    }
     setUser(userData);
     loadCandidateData(userData);
   }, [navigate]);
@@ -29,16 +32,46 @@ const MyApplications = () => {
         c.userId === userData.id || c.email === userData.email || c.name === userData.name
       );
       setCandidate(candidateProfile);
+      
       const allApplications = JSON.parse(localStorage.getItem('applications') || '[]');
-      const myApplications = allApplications.filter(app =>
+      
+      // Filter applications for this candidate
+      let myApplications = allApplications.filter(app =>
         app.candidateId === candidateProfile?.id ||
         app.candidateName === userData.name ||
         app.candidateEmail === userData.email
       );
+      
+      // ===== AUTO-SHORTLIST: CV Score >= 50% =====
+      // Check if any applications need auto-shortlisting
+      let needsUpdate = false;
+      const updatedApplications = myApplications.map(app => {
+        // If CV score >= 50 and status is 'Applied', auto-shortlist
+        if (app.cvScore >= 50 && app.status === 'Applied') {
+          needsUpdate = true;
+          console.log(`Auto-shortlisting ${app.jobTitle} (CV Score: ${app.cvScore}%)`);
+          return { ...app, status: 'Shortlisted' };
+        }
+        return app;
+      });
+      
+      // Update localStorage if changes were made
+      if (needsUpdate) {
+        const allApps = JSON.parse(localStorage.getItem('applications') || '[]');
+        const updatedAllApps = allApps.map(app => {
+          const updated = updatedApplications.find(u => u.id === app.id);
+          return updated || app;
+        });
+        localStorage.setItem('applications', JSON.stringify(updatedAllApps));
+        myApplications = updatedApplications;
+      }
+      
       setApplications(myApplications);
+      
       const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
       const myInterviews = allInterviews.filter(i => myApplications.some(a => a.id === i.applicationId));
       setInterviews(myInterviews);
+      
       await loadReportsFromBackend(myInterviews);
     } catch (err) {
       console.error(err);
@@ -97,7 +130,15 @@ const MyApplications = () => {
 
   const tabCount = (key) => {
     if (key === 'all') return applications.length;
-    const map = { 'applied':'Applied','under-review':'Under Review','shortlisted':'Shortlisted','interview-scheduled':'Interview Scheduled','interview-completed':'Interview Completed','rejected':'Rejected','hired':'Hired' };
+    const map = { 
+      'applied':'Applied',
+      'under-review':'Under Review',
+      'shortlisted':'Shortlisted',
+      'interview-scheduled':'Interview Scheduled',
+      'interview-completed':'Interview Completed',
+      'rejected':'Rejected',
+      'hired':'Hired' 
+    };
     return applications.filter(a => a.status === map[key]).length;
   };
 
@@ -266,7 +307,7 @@ const MyApplications = () => {
         }
         .ma-chip svg { width:11px; height:11px; stroke:#9ca3af; fill:none; flex-shrink:0; }
 
-        /* score bar */
+        /* score bar - CV SCORE */
         .ma-scorebar { margin-bottom:.9rem; }
         .ma-scorebar-top {
           display:flex; justify-content:space-between;
@@ -274,6 +315,14 @@ const MyApplications = () => {
         }
         .ma-scorebar-bg { height:5px; background:#f3f4f6; border-radius:3px; overflow:hidden; }
         .ma-scorebar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+
+        /* CV Score Badge */
+        .ma-cv-score-badge {
+          display:inline-flex; align-items:center; gap:.35rem;
+          padding:.25rem .75rem; border-radius:20px;
+          font-size:.75rem; font-weight:600;
+          margin-left:.5rem;
+        }
 
         /* ──────────── INTERVIEW BLOCK ──────────── */
         .ma-iv {
@@ -335,6 +384,15 @@ const MyApplications = () => {
         .ma-btn-outline   { background:white; color:#7c3aed; border:1.5px solid #ede9fe; }
         .ma-btn-outline:hover { background:#f5f3ff; border-color:#7c3aed; }
 
+        /* CV Score based button */
+        .ma-btn-cv-eligible { background:#7c3aed; color:white; }
+        .ma-btn-cv-eligible:hover { background:#6d28d9; }
+        .ma-btn-cv-ineligible { background:#9ca3af; color:white; opacity:0.7; cursor:not-allowed; }
+
+        /* Interview button */
+        .ma-btn-interview { background:#7c3aed; color:white; }
+        .ma-btn-interview:hover { background:#6d28d9; }
+
         /* ──────────── EMPTY STATE ──────────── */
         .ma-empty {
           background:white; border:1.5px solid #f3f4f6;
@@ -358,89 +416,20 @@ const MyApplications = () => {
         .ma-browse:hover { background:#6d28d9; transform:translateY(-1px); box-shadow:0 8px 20px rgba(124,58,237,.3); }
         .ma-browse svg { width:14px; height:14px; stroke:currentColor; fill:none; }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE
-        ══════════════════════════════════════ */
-
-        /* Tablet: 1024px */
-        @media (max-width:1024px) {
-          .ma-stats { grid-template-columns:repeat(3,1fr); }
+        /* CV Score Info */
+        .ma-cv-info {
+          display:flex; align-items:center; gap:.5rem;
+          margin-bottom:.5rem; font-size:.75rem;
         }
-
-        /* Mobile: 768px */
-        @media (max-width:768px) {
-          .ma-hero { padding:2rem 1.25rem 1.75rem; }
-          .ma-main { padding:1.25rem; }
-
-          .ma-stats {
-            grid-template-columns:repeat(3,1fr);
-            gap:.625rem;
-            margin-bottom:1.25rem;
-          }
-          .ma-stat { padding:.875rem .75rem; gap:.375rem; border-radius:12px; }
-          .ma-stat-icon { width:30px; height:30px; border-radius:8px; }
-          .ma-stat-icon svg { width:14px; height:14px; }
-          .ma-stat-val { font-size:1.3rem; }
-          .ma-stat-lbl { font-size:.65rem; }
-
-          /* Card header stacks on mobile */
-          .ma-ch { flex-direction:column; gap:.5rem; }
-          .ma-badge { align-self:flex-start; }
-          .ma-job-link { white-space:normal; font-size:.9rem; }
-
-          .ma-card-body { padding:1.1rem; }
-          .ma-iv { padding:.875rem; }
-
-          .ma-rscores { grid-template-columns:repeat(2,1fr); gap:.375rem; }
-
-          /* Buttons stack */
-          .ma-actions { flex-direction:column; gap:.4rem; }
-          .ma-btn { width:100%; justify-content:center; padding:.6rem 1rem; font-size:.8rem; }
-        }
-
-        /* Small Mobile: 480px */
-        @media (max-width:480px) {
-          .ma-hero-title { font-size:1.3rem; }
-          .ma-hero-sub { font-size:.8rem; }
-
-          /* Show only 4 stats on very small screens */
-          .ma-stats {
-            grid-template-columns:repeat(2,1fr);
-            gap:.5rem;
-          }
-          .ma-stat:nth-child(5),
-          .ma-stat:nth-child(6) { display:none; }
-
-          .ma-tab { padding:.38rem .75rem; font-size:.72rem; }
-
-          .ma-card { border-radius:14px; }
-          .ma-card-body { padding:.875rem; }
-          .ma-card-bar { height:3px; }
-
-          .ma-job-link { font-size:.875rem; }
-          .ma-company { font-size:.75rem; }
-          .ma-badge { font-size:.65rem; padding:.25rem .65rem; }
-
-          .ma-chip { font-size:.7rem; padding:.2rem .5rem; }
-
-          .ma-iv { padding:.75rem; border-radius:12px; }
-          .ma-iv-title { font-size:.78rem; }
-
-          .ma-rscores { grid-template-columns:repeat(2,1fr); }
-          .ma-rs-val { font-size:.875rem; }
-          .ma-rs-lbl { font-size:.58rem; }
-
-          .ma-empty { padding:2.5rem 1rem; border-radius:16px; }
-          .ma-empty-icon { width:58px; height:58px; border-radius:14px; }
-          .ma-empty-icon svg { width:26px; height:26px; }
-          .ma-empty h2 { font-size:1rem; }
-        }
-
-        /* Very small: 360px */
-        @media (max-width:360px) {
-          .ma-main { padding:1rem .875rem; }
-          .ma-card-body { padding:.75rem; }
-          .ma-stat-val { font-size:1.15rem; }
+        
+        /* Auto-shortlist badge */
+        .ma-auto-badge {
+          font-size:0.65rem;
+          background:rgba(22, 163, 74, 0.1);
+          color:#16a34a;
+          padding:2px 6px;
+          border-radius:12px;
+          margin-left:4px;
         }
       `}</style>
 
@@ -502,6 +491,9 @@ const MyApplications = () => {
                     const sc = cfg(app.status);
                     const iv = getInterview(app.id);
                     const rp = iv ? getReport(iv.id) : null;
+                    
+                    // Check if this was auto-shortlisted (CV >= 50 and status changed)
+                    const isAutoShortlisted = app.cvScore >= 50 && app.status === 'Shortlisted';
 
                     return (
                       <div key={app.id} className="ma-card">
@@ -517,15 +509,35 @@ const MyApplications = () => {
                             <span className="ma-badge" style={{ background: sc.bg, color: sc.color, borderColor: sc.border }}>
                               {STATUS_ICONS[app.status]}
                               {app.status}
+                              {isAutoShortlisted && <span className="ma-auto-badge">Auto</span>}
                             </span>
                           </div>
 
-                          {/* Meta */}
+                          {/* Meta with CV Score */}
                           <div className="ma-meta">
                             <span className="ma-chip">
                               <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                               {new Date(app.appliedDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
                             </span>
+                            
+                            {/* CV Score Badge */}
+                            {app.cvScore !== undefined && (
+                              <span 
+                                className="ma-chip" 
+                                style={{ 
+                                  background: app.cvScore >= 50 ? '#f0fdf4' : '#fef2f2',
+                                  borderColor: app.cvScore >= 50 ? '#bbf7d0' : '#fecaca',
+                                  color: app.cvScore >= 50 ? '#16a34a' : '#dc2626'
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                  <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                CV Match: {app.cvScore}%
+                              </span>
+                            )}
+                            
                             {app.score && (
                               <span className="ma-chip">
                                 <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -534,15 +546,23 @@ const MyApplications = () => {
                             )}
                           </div>
 
-                          {/* Score bar */}
-                          {app.score && (
+                          {/* CV Score bar */}
+                          {app.cvScore !== undefined && (
                             <div className="ma-scorebar">
                               <div className="ma-scorebar-top">
-                                <span>Interview Score</span>
-                                <span style={{ color: sc.color }}>{app.score}%</span>
+                                <span>CV Match Score</span>
+                                <span style={{ color: app.cvScore >= 50 ? '#16a34a' : '#dc2626' }}>
+                                  {app.cvScore}% {app.cvScore >= 50 ? '✅ Eligible' : '❌ Not Eligible'}
+                                </span>
                               </div>
                               <div className="ma-scorebar-bg">
-                                <div className="ma-scorebar-fill" style={{ width:`${app.score}%`, background: sc.bar }} />
+                                <div 
+                                  className="ma-scorebar-fill" 
+                                  style={{ 
+                                    width: `${app.cvScore}%`, 
+                                    background: app.cvScore >= 50 ? '#22c55e' : '#ef4444' 
+                                  }} 
+                                />
                               </div>
                             </div>
                           )}
@@ -590,26 +610,36 @@ const MyApplications = () => {
                             </div>
                           )}
 
-                          {/* Action buttons */}
+                          {/* Action buttons - UPDATED LOGIC */}
                           <div className="ma-actions">
-                            {app.status === 'Shortlisted' && (
-                              <Link to={`/interview/${app.jobId}`} state={{ applicationId: app.id, jobTitle: app.jobTitle }} className="ma-btn ma-btn-green">
+                            {/* Case 1: Show Interview button for Shortlisted OR Scheduled status */}
+                            {(app.status === 'Shortlisted' || app.status === 'Interview Scheduled') && (
+                              <Link 
+                                to={`/interview/${app.jobId}`} 
+                                state={{ applicationId: app.id, jobTitle: app.jobTitle }} 
+                                className="ma-btn ma-btn-interview"
+                              >
                                 <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                                Give Interview
+                                {app.status === 'Interview Scheduled' ? 'Join Interview' : 'Give Interview'}
                               </Link>
                             )}
-                            {iv?.status === 'Scheduled' && (
-                              <Link to={`/interview/${app.jobId}`} className="ma-btn ma-btn-orange">
-                                <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                Join Interview
-                              </Link>
+
+                            {/* CV eligible info (when not shortlisted/scheduled) */}
+                            {app.cvScore >= 50 && app.status !== 'Shortlisted' && app.status !== 'Interview Scheduled' && app.status !== 'Interview Completed' && (
+                              <div className="ma-cv-info">
+                                <span style={{ color: '#16a34a' }}>✅ CV eligible for interview (auto-shortlisted)</span>
+                              </div>
                             )}
+
+                            {/* Report available */}
                             {rp && (
                               <Link to={`/report/${iv?.id || app.sessionId}`} className="ma-btn ma-btn-purple">
                                 <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                                 View Full Report
                               </Link>
                             )}
+
+                            {/* Always show View Job button */}
                             <Link to={`/job/${app.jobId}`} className="ma-btn ma-btn-outline">
                               <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                               View Job
