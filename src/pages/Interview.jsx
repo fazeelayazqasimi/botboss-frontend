@@ -412,10 +412,14 @@ const Interview = () => {
   const startInterview = async () => {
     try {
       setStatus('loading'); setError('');
+
+      // ── Fix: fallback agar job.description missing ho ──
+      const jobDesc = job?.description || job?.title || 'General position interview';
+
       const r = await fetch(`${API_URL}/interview/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_description: job.description }),
+        body: JSON.stringify({ job_description: jobDesc }),
       });
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
@@ -743,7 +747,6 @@ const Interview = () => {
 
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                {/* Cancel always visible when ready */}
                 {(status === 'ready') && !processing && (
                   <button style={{ ...s.btn, ...s.btnGhost }} onClick={cancelInterview}>
                     Cancel
