@@ -155,6 +155,18 @@ const MyApplications = () => {
     { label: 'Offers',      val: applications.filter(a => a.status === 'Hired').length,                        color: '#15803d', bg: '#f0fdf4', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
   ];
 
+  // 🔥 Helper function to check if interview is completed
+  const isInterviewCompleted = (app) => {
+    const interview = getInterview(app.id);
+    return interview?.status === 'Completed' || app.status === 'Interview Completed';
+  };
+
+  // 🔥 Helper function to check if interview is in progress
+  const isInterviewInProgress = (app) => {
+    const interview = getInterview(app.id);
+    return interview?.status === 'Scheduled' || app.status === 'Interview Scheduled';
+  };
+
   /* ─────────── RENDER ─────────── */
   return (
     <>
@@ -307,7 +319,7 @@ const MyApplications = () => {
         }
         .ma-chip svg { width:11px; height:11px; stroke:#9ca3af; fill:none; flex-shrink:0; }
 
-        /* score bar - CV SCORE */
+        /* score bar - CV SCORE (REMOVED PERCENTAGE) */
         .ma-scorebar { margin-bottom:.9rem; }
         .ma-scorebar-top {
           display:flex; justify-content:space-between;
@@ -316,7 +328,7 @@ const MyApplications = () => {
         .ma-scorebar-bg { height:5px; background:#f3f4f6; border-radius:3px; overflow:hidden; }
         .ma-scorebar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
 
-        /* CV Score Badge */
+        /* CV Score Badge - WITHOUT PERCENTAGE */
         .ma-cv-score-badge {
           display:inline-flex; align-items:center; gap:.35rem;
           padding:.25rem .75rem; border-radius:20px;
@@ -383,15 +395,12 @@ const MyApplications = () => {
         .ma-btn-purple:hover { background:#86198f; }
         .ma-btn-outline   { background:white; color:#7c3aed; border:1.5px solid #ede9fe; }
         .ma-btn-outline:hover { background:#f5f3ff; border-color:#7c3aed; }
-
-        /* CV Score based button */
-        .ma-btn-cv-eligible { background:#7c3aed; color:white; }
-        .ma-btn-cv-eligible:hover { background:#6d28d9; }
-        .ma-btn-cv-ineligible { background:#9ca3af; color:white; opacity:0.7; cursor:not-allowed; }
+        .ma-btn-disabled  { background:#d1d5db; color:#6b7280; cursor:not-allowed; opacity:0.7; }
 
         /* Interview button */
         .ma-btn-interview { background:#7c3aed; color:white; }
         .ma-btn-interview:hover { background:#6d28d9; }
+        .ma-btn-interview-disabled { background:#c4b5fd; color:white; cursor:not-allowed; opacity:0.7; }
 
         /* ──────────── EMPTY STATE ──────────── */
         .ma-empty {
@@ -427,6 +436,16 @@ const MyApplications = () => {
           font-size:0.65rem;
           background:rgba(22, 163, 74, 0.1);
           color:#16a34a;
+          padding:2px 6px;
+          border-radius:12px;
+          margin-left:4px;
+        }
+
+        /* Completed interview badge */
+        .ma-completed-badge {
+          font-size:0.65rem;
+          background:rgba(162, 28, 175, 0.1);
+          color:#a21caf;
           padding:2px 6px;
           border-radius:12px;
           margin-left:4px;
@@ -494,6 +513,10 @@ const MyApplications = () => {
                     
                     // Check if this was auto-shortlisted (CV >= 50 and status changed)
                     const isAutoShortlisted = app.cvScore >= 50 && app.status === 'Shortlisted';
+                    
+                    // 🔥 Check if interview is completed
+                    const completed = isInterviewCompleted(app);
+                    const inProgress = isInterviewInProgress(app);
 
                     return (
                       <div key={app.id} className="ma-card">
@@ -510,17 +533,18 @@ const MyApplications = () => {
                               {STATUS_ICONS[app.status]}
                               {app.status}
                               {isAutoShortlisted && <span className="ma-auto-badge">Auto</span>}
+                              {completed && <span className="ma-completed-badge">✓ Done</span>}
                             </span>
                           </div>
 
-                          {/* Meta with CV Score */}
+                          {/* Meta with CV Score - WITHOUT PERCENTAGE */}
                           <div className="ma-meta">
                             <span className="ma-chip">
                               <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                               {new Date(app.appliedDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
                             </span>
                             
-                            {/* CV Score Badge */}
+                            {/* 🔥 UPDATED: CV Score Badge - Without percentage display */}
                             {app.cvScore !== undefined && (
                               <span 
                                 className="ma-chip" 
@@ -534,7 +558,7 @@ const MyApplications = () => {
                                   <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                   <polyline points="14 2 14 8 20 8"/>
                                 </svg>
-                                CV Match: {app.cvScore}%
+                                CV {app.cvScore >= 50 ? '✅' : '📄'}
                               </span>
                             )}
                             
@@ -546,14 +570,12 @@ const MyApplications = () => {
                             )}
                           </div>
 
-                          {/* CV Score bar */}
+                          {/* 🔥 UPDATED: CV Score bar - Without percentage text */}
                           {app.cvScore !== undefined && (
                             <div className="ma-scorebar">
                               <div className="ma-scorebar-top">
-                                <span>CV Match Score</span>
-                                <span style={{ color: app.cvScore >= 50 ? '#16a34a' : '#dc2626' }}>
-                                  {app.cvScore}% {app.cvScore >= 50 ? '✅ Eligible' : '❌ Not Eligible'}
-                                </span>
+                                <span>CV Match</span>
+                                {/* REMOVED percentage text */}
                               </div>
                               <div className="ma-scorebar-bg">
                                 <div 
@@ -610,24 +632,35 @@ const MyApplications = () => {
                             </div>
                           )}
 
-                          {/* Action buttons - UPDATED LOGIC */}
+                          {/* 🔥 UPDATED: Action buttons with disabled after completion */}
                           <div className="ma-actions">
-                            {/* Case 1: Show Interview button for Shortlisted OR Scheduled status */}
+                            {/* Case 1: Show Interview button for Shortlisted OR Scheduled status - but disabled if completed */}
                             {(app.status === 'Shortlisted' || app.status === 'Interview Scheduled') && (
-                              <Link 
-                                to={`/interview/${app.jobId}`} 
-                                state={{ applicationId: app.id, jobTitle: app.jobTitle }} 
-                                className="ma-btn ma-btn-interview"
-                              >
-                                <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                                {app.status === 'Interview Scheduled' ? 'Join Interview' : 'Give Interview'}
-                              </Link>
+                              completed ? (
+                                <button 
+                                  className="ma-btn ma-btn-interview-disabled"
+                                  disabled
+                                  title="Interview already completed"
+                                >
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                  Interview Completed
+                                </button>
+                              ) : (
+                                <Link 
+                                  to={`/interview/${app.jobId}`} 
+                                  state={{ applicationId: app.id, jobTitle: app.jobTitle }} 
+                                  className="ma-btn ma-btn-interview"
+                                >
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                  {app.status === 'Interview Scheduled' ? 'Join Interview' : 'Give Interview'}
+                                </Link>
+                              )
                             )}
 
-                            {/* CV eligible info (when not shortlisted/scheduled) */}
+                            {/* CV eligible info (when not shortlisted/scheduled) - without percentage */}
                             {app.cvScore >= 50 && app.status !== 'Shortlisted' && app.status !== 'Interview Scheduled' && app.status !== 'Interview Completed' && (
                               <div className="ma-cv-info">
-                                <span style={{ color: '#16a34a' }}>✅ CV eligible for interview (auto-shortlisted)</span>
+                                <span style={{ color: '#16a34a' }}>✅ CV eligible</span>
                               </div>
                             )}
 
