@@ -32,7 +32,7 @@ const C = {
   white: '#FFFFFF', grey50: '#F8F9FB', grey100: '#F0F2F7', grey200: '#E2E6EF',
   grey400: '#9CA3B8', grey600: '#6B7280', grey700: '#374151', grey900: '#111827',
   purple: '#7C3AED', purpleLight: '#EDE9FE', purpleMid: '#A78BFA', purpleDark: '#4C1D95',
-  green: '#059669', greenLight: '#D1FAE5', red: '#DC2626', redLight: '#FEE2E2',
+  green: '#059669', greenLight: '#D1FAE5', red: '#DC2626', redLight: '#FEE2E2', amber: '#D97706',
 };
 const font = "'Poppins', sans-serif";
 
@@ -50,14 +50,6 @@ const sectionCard = {
   background: C.white, borderRadius: 14, border: `1px solid ${C.grey200}`,
   boxShadow: '0 2px 12px rgba(0,0,0,0.04)', marginBottom: 16, overflow: 'hidden',
 };
-const sectionHeader = (iconBg, iconColor) => ({
-  display: 'flex', alignItems: 'center', gap: 10,
-  padding: '1rem 1.375rem', borderBottom: `1px solid ${C.grey100}`,
-  icon: { width: 30, height: 30, borderRadius: 7, background: iconBg,
-    display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: '0.9rem', fontWeight: 700, color: C.grey900 },
-  iconColor,
-});
 const btn = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   gap: 7, height: 42, padding: '0 20px', borderRadius: 9, border: 'none',
@@ -183,6 +175,19 @@ const PostJob = () => {
     onBlur:  e => e.target.style.borderColor = C.grey200,
   });
 
+  // Salary options with Unpaid
+  const salaryOptions = [
+    'Unpaid (Volunteer/Internship)',
+    'Less than 50k/month',
+    '50k–80k/month',
+    '80k–120k/month',
+    '120k–150k/month',
+    '150k–200k/month',
+    '200k+ /month',
+    'Negotiable',
+    'Commission based'
+  ];
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
       <Navbar />
@@ -255,10 +260,23 @@ const PostJob = () => {
                 <input {...iBase()} type="text" name="location" value={formData.location}
                   onChange={handleChange} placeholder="e.g. Karachi (Remote)" required />
               </Field>
+              
+              {/* 🔥 UPDATED: Salary field with Unpaid option */}
               <Field label="Salary" required>
-                <input {...iBase()} type="text" name="salary" value={formData.salary}
-                  onChange={handleChange} placeholder="e.g. Rs 80k–120k/month" required />
+                <select 
+                  style={inputBase} 
+                  name="salary" 
+                  value={formData.salary} 
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select Salary</option>
+                  {salaryOptions.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
               </Field>
+              
               <Field label="Experience Required">
                 <input {...iBase()} type="text" name="experience" value={formData.experience}
                   onChange={handleChange} placeholder="e.g. 3–5 years" />
@@ -267,7 +285,7 @@ const PostJob = () => {
           </Section>
 
           {/* Skills */}
-          <Section icon={ic.tool} iconBg="#FEF3C7" iconColor={C.amber || '#D97706'} title="Required Skills">
+          <Section icon={ic.tool} iconBg="#FEF3C7" iconColor={C.amber} title="Required Skills">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <input
                 {...iBase({ flex: 1 })}
@@ -324,7 +342,9 @@ const PostJob = () => {
                   onFocus={e => e.target.style.borderColor = C.purple}
                   onBlur={e => e.target.style.borderColor = C.grey200} />
               </Field>
-              <Field label="Application Deadline">
+              
+              {/* 🔥 UPDATED: Changed from "Application Deadline" to "Job Deadline" */}
+              <Field label="Job Deadline">
                 <input {...iBase({ maxWidth: 240 })} type="date" name="deadline"
                   value={formData.deadline} onChange={handleChange}
                   min={new Date().toISOString().split('T')[0]} />
@@ -348,9 +368,9 @@ const PostJob = () => {
                 fontSize: '0.78rem', color: C.grey600 }}>
                 {formData.location && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Icon d={ic.mapPin} size={12} color={C.grey400} />{formData.location}</span>}
-                {formData.salary   && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {formData.salary && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Icon d={ic.dollar} size={12} color={C.grey400} />{formData.salary}</span>}
-                {formData.type     && <span>{formData.type}</span>}
+                {formData.type && <span>{formData.type}</span>}
               </div>
               {formData.skills.length > 0 && (
                 <div style={{ marginTop: 8, fontSize: '0.78rem', color: C.grey600 }}>
