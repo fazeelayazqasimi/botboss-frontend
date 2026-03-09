@@ -540,7 +540,7 @@ const Interview = () => {
           <div style={{ animation: 'spin 1s linear infinite', width: 40, height: 40 }}>
             <Icon d={icons.loader} size={40} color={C.purple} />
           </div>
-          <h2 style={{ ...s.h2, marginTop: '1rem' }}>Preparing your interview</h2>
+          <h2 style={{ ...s.h2, marginTop: '1rem' }}>Preparing your interview !!</h2>
           <p style={{ ...s.body, marginTop: '0.4rem' }}>AI is generating personalised questions…</p>
         </CenterBlock>
       </CenteredCard>
