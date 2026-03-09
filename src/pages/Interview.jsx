@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { post, postFormData, checkBackendHealth } from '../services/api';
 
-// ─── Inline SVG Icons (no extra library) ───────────────────────────────────
+// ─── Inline SVG Icons ───────────────────────────────────────────────────
 const Icon = ({ d, size = 20, color = 'currentColor', strokeWidth = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
@@ -55,7 +56,6 @@ const C = {
 };
 
 const s = {
-  // Layout
   page: {
     minHeight: '100vh',
     display: 'flex',
@@ -74,8 +74,6 @@ const s = {
     width: '100%',
     maxWidth: '780px',
   },
-
-  // Cards
   card: {
     background: C.white,
     borderRadius: '16px',
@@ -84,8 +82,6 @@ const s = {
     overflow: 'hidden',
   },
   cardPad: { padding: '2.5rem' },
-
-  // Chip / Badge
   chip: (bg, color) => ({
     display: 'inline-flex',
     alignItems: 'center',
@@ -98,8 +94,6 @@ const s = {
     fontWeight: 600,
     letterSpacing: '0.02em',
   }),
-
-  // Progress bar
   progressTrack: {
     height: '4px',
     background: C.grey100,
@@ -112,15 +106,11 @@ const s = {
     transition: 'width 0.5s ease',
     borderRadius: 0,
   }),
-
-  // Section divider
   divider: {
     height: '1px',
     background: C.grey100,
     margin: '0',
   },
-
-  // Typography
   h1: {
     fontSize: '1.625rem',
     fontWeight: 700,
@@ -146,8 +136,6 @@ const s = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
-
-  // Buttons
   btn: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -194,8 +182,6 @@ const s = {
     cursor: 'not-allowed',
     pointerEvents: 'none',
   },
-
-  // Question card
   questionBox: {
     background: C.grey50,
     border: `1px solid ${C.grey200}`,
@@ -206,16 +192,12 @@ const s = {
     color: C.grey900,
     lineHeight: 1.7,
   },
-
-  // Timer
   timerBox: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
   },
-
-  // Textarea
   textarea: {
     width: '100%',
     padding: '1rem',
@@ -231,8 +213,6 @@ const s = {
     background: C.white,
     boxSizing: 'border-box',
   },
-
-  // Video
   videoWrap: {
     width: '100%',
     borderRadius: '12px',
@@ -247,8 +227,6 @@ const s = {
     objectFit: 'cover',
     display: 'block',
   },
-
-  // Mode tabs
   tabRow: {
     display: 'flex',
     background: C.grey100,
@@ -274,8 +252,6 @@ const s = {
     boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
     fontFamily: "'Poppins', sans-serif",
   }),
-
-  // Status dot
   dot: (color) => ({
     width: 8,
     height: 8,
@@ -283,8 +259,6 @@ const s = {
     background: color,
     flexShrink: 0,
   }),
-
-  // Alert / notice
   notice: (bg, border, color) => ({
     display: 'flex',
     alignItems: 'flex-start',
@@ -297,8 +271,6 @@ const s = {
     fontSize: '0.85rem',
     lineHeight: 1.55,
   }),
-
-  // Eye contact overlay
   eyeOverlay: {
     position: 'absolute',
     top: '12px',
@@ -315,8 +287,6 @@ const s = {
     gap: '6px',
     whiteSpace: 'nowrap',
   },
-
-  // Rec indicator
   recDot: {
     width: 10,
     height: 10,
@@ -347,6 +317,8 @@ const Interview = () => {
   const [inputMode, setInputMode] = useState('text');
   const [processing, setProcessing] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Preparing your interview...');
+  const [retryCount, setRetryCount] = useState(0);
 
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -358,12 +330,25 @@ const Interview = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'candidate') { navigate('/login'); return; }
+    if (!userData || userData.type !== 'candidate') { 
+      navigate('/login'); 
+      return; 
+    }
     setUser(userData);
+    
+    // Get job details from localStorage (temp - will be replaced by API)
     const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
     const jobData = jobs.find(j => j.id === parseInt(jobId));
-    if (jobData) setJob(jobData);
-    else navigate('/jobs');
+    if (jobData) {
+      setJob(jobData);
+    } else {
+      // If not in localStorage, fetch from API
+      fetch(`${API_URL}/jobs/${jobId}`)
+        .then(res => res.json())
+        .then(data => setJob(data))
+        .catch(() => navigate('/jobs'));
+    }
+    
     checkBackendConnection();
     checkVoiceAvailability();
   }, [jobId, navigate]);
@@ -372,28 +357,43 @@ const Interview = () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       setVoiceAvailable(devices.some(d => d.kind === 'audioinput'));
-    } catch { setVoiceAvailable(false); }
+    } catch { 
+      setVoiceAvailable(false); 
+    }
   };
 
   const checkBackendConnection = async () => {
     try {
-      const r = await fetch(`${API_URL}/`);
-      if (r.ok) { setBackendStatus('connected'); setError(''); }
-      else { setBackendStatus('error'); setError('Backend not responding'); }
-    } catch { setBackendStatus('error'); setError('Cannot connect to backend'); }
+      const response = await fetch(`${API_URL}/`);
+      if (response.ok) { 
+        setBackendStatus('connected'); 
+        setError(''); 
+      } else { 
+        setBackendStatus('error'); 
+        setError('Backend not responding properly'); 
+      }
+    } catch { 
+      setBackendStatus('error'); 
+      setError('Cannot connect to backend server'); 
+    }
   };
 
-  useEffect(() => () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (eyeCheckRef.current) clearInterval(eyeCheckRef.current);
-    if (mediaRecorderRef.current && isRecording)
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (eyeCheckRef.current) clearInterval(eyeCheckRef.current);
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (status === 'recording' && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
-    } else if (timeLeft === 0 && status === 'recording') stopRecording();
+    } else if (timeLeft === 0 && status === 'recording') {
+      stopRecording();
+    }
     return () => clearTimeout(timerRef.current);
   }, [timeLeft, status]);
 
@@ -411,28 +411,73 @@ const Interview = () => {
 
   const startInterview = async () => {
     try {
-      setStatus('loading'); setError('');
-      const r = await fetch(`${API_URL}/interview/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_description: job.description }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const data = await r.json();
-      setSessionId(data.session_id);
-      setTotalQuestions(data.questions_count || 5);
-      await getNextQuestion(data.session_id);
-    } catch (e) {
-      setError('Failed to start interview. Please try again.');
+      setStatus('loading'); 
+      setError('');
+      setLoadingMessage('Preparing your interview...');
+      
+      // Add retry logic for interview start
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 sec for AI
+          
+          const response = await fetch(`${API_URL}/interview/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_description: job.description }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to start');
+          }
+          
+          const data = await response.json();
+          setSessionId(data.session_id);
+          setTotalQuestions(data.questions_count || 5);
+          await getNextQuestion(data.session_id);
+          return; // Success - exit function
+          
+        } catch (err) {
+          attempts++;
+          console.log(`Start interview attempt ${attempts} failed:`, err.message);
+          
+          if (attempts === maxAttempts) throw err;
+          
+          setLoadingMessage(`Retrying... attempt ${attempts}/${maxAttempts}`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+      
+    } catch (error) {
+      console.error('Interview start error:', error);
+      
+      if (error.name === 'AbortError') {
+        setError('Interview generation is taking longer than usual. Please try again.');
+      } else {
+        setError('Failed to start interview. Please try again.');
+      }
+      
       setStatus('initial');
     }
   };
 
   const getNextQuestion = async (sid) => {
     try {
-      const r = await fetch(`${API_URL}/interview/next/${sid}`);
-      if (!r.ok) throw new Error();
-      const data = await r.json();
+      const response = await fetch(`${API_URL}/interview/next/${sid}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to get question');
+      }
+
+      const data = await response.json();
+      
       if (data.message === 'Interview Completed' || data.status === 'completed') {
         setStatus('completed');
         setTimeout(() => navigate(`/report/${sid}`), 2000);
@@ -440,10 +485,15 @@ const Interview = () => {
         setCurrentQuestion(data.question);
         setQuestionNumber(data.question_number);
         setTotalQuestions(data.total_questions || 5);
-        setStatus('ready'); setTimeLeft(60); setAnswerText('');
+        setStatus('ready'); 
+        setTimeLeft(60); 
+        setAnswerText('');
       }
-    } catch {
-      setError('Failed to load question.'); setStatus('ready');
+      
+    } catch (error) {
+      console.error('Failed to get question:', error);
+      setError('Failed to load question. Please try again.');
+      setStatus('ready');
     }
   };
 
@@ -451,13 +501,23 @@ const Interview = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       videoRef.current.srcObject = stream;
+      
       mediaRecorderRef.current = new MediaRecorder(stream);
       chunksRef.current = [];
-      mediaRecorderRef.current.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      
+      mediaRecorderRef.current.ondataavailable = e => { 
+        if (e.data.size > 0) chunksRef.current.push(e.data); 
+      };
+      
       mediaRecorderRef.current.onstop = sendVoiceAnswer;
+      
       mediaRecorderRef.current.start();
-      setIsRecording(true); setStatus('recording'); setTimeLeft(60);
-    } catch {
+      setIsRecording(true); 
+      setStatus('recording'); 
+      setTimeLeft(60);
+      
+    } catch (error) {
+      console.error('Camera access denied:', error);
       setError('Camera access denied. Please use text mode.');
       setInputMode('text');
     }
@@ -467,7 +527,9 @@ const Interview = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      setIsRecording(false); setStatus('processing'); setProcessing(true);
+      setIsRecording(false); 
+      setStatus('processing'); 
+      setProcessing(true);
     }
   };
 
@@ -475,35 +537,79 @@ const Interview = () => {
     try {
       const formData = new FormData();
       formData.append('file', new Blob(chunksRef.current, { type: 'audio/webm' }), 'answer.webm');
-      const r = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { method: 'POST', body: formData });
-      if (!r.ok) throw new Error();
-      const data = await r.json();
-      if (data.completed) { setStatus('completed'); setTimeout(() => navigate(`/report/${sessionId}`), 2000); }
-      else await getNextQuestion(sessionId);
-    } catch {
+      
+      const response = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { 
+        method: 'POST', 
+        body: formData 
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send answer');
+      }
+      
+      const data = await response.json();
+      
+      if (data.completed) { 
+        setStatus('completed'); 
+        setTimeout(() => navigate(`/report/${sessionId}`), 2000); 
+      } else {
+        await getNextQuestion(sessionId);
+      }
+      
+    } catch (error) {
+      console.error('Voice answer failed:', error);
       setError('Voice recording failed. Switching to text mode.');
-      setInputMode('text'); setStatus('ready');
-    } finally { setProcessing(false); }
+      setInputMode('text'); 
+      setStatus('ready');
+    } finally { 
+      setProcessing(false); 
+    }
   };
 
   const sendTextAnswer = async () => {
-    if (!answerText.trim()) { setError('Please enter your answer'); return; }
+    if (!answerText.trim()) { 
+      setError('Please enter your answer'); 
+      return; 
+    }
+    
     try {
       setProcessing(true);
+      
       const formData = new FormData();
       formData.append('file', new Blob([answerText], { type: 'text/plain' }), 'answer.txt');
-      const r = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { method: 'POST', body: formData });
-      if (!r.ok) throw new Error(await r.text());
-      const data = await r.json();
-      if (data.completed) { setStatus('completed'); setTimeout(() => navigate(`/report/${sessionId}`), 2000); }
-      else await getNextQuestion(sessionId);
-    } catch {
-      setError('Failed to submit. Please try again.'); setStatus('ready');
-    } finally { setProcessing(false); }
+      
+      const response = await fetch(`${API_URL}/interview/voice-answer/${sessionId}`, { 
+        method: 'POST', 
+        body: formData 
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to send');
+      }
+      
+      const data = await response.json();
+      
+      if (data.completed) { 
+        setStatus('completed'); 
+        setTimeout(() => navigate(`/report/${sessionId}`), 2000); 
+      } else {
+        await getNextQuestion(sessionId);
+      }
+      
+    } catch (error) {
+      console.error('Text answer failed:', error);
+      setError('Failed to submit answer. Please try again.'); 
+      setStatus('ready');
+    } finally { 
+      setProcessing(false); 
+    }
   };
 
   const cancelInterview = () => {
-    if (window.confirm('Cancel interview?')) navigate('/my-applications');
+    if (window.confirm('Cancel interview?')) {
+      navigate('/my-applications');
+    }
   };
 
   const timerColor = timeLeft < 10 ? C.red : timeLeft < 20 ? C.amber : C.grey900;
@@ -517,7 +623,7 @@ const Interview = () => {
           <Icon d={icons.plug} size={40} color={C.red} />
           <h2 style={{ ...s.h2, marginTop: '1rem' }}>Connection Failed</h2>
           <p style={{ ...s.body, maxWidth: 360, margin: '0.5rem auto 1.5rem' }}>
-            Unable to reach the backend server. Make sure it is running on port 8000.
+            Unable to reach the backend server.
           </p>
           <button style={{ ...s.btn, ...s.btnPrimary }} onClick={checkBackendConnection}>
             <Icon d={icons.refresh} size={16} color={C.white} />
@@ -528,7 +634,7 @@ const Interview = () => {
     </Page>
   );
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // ── Loading with retry ───────────────────────────────────────────────────
   if (status === 'loading') return (
     <Page>
       <CenteredCard>
@@ -537,7 +643,28 @@ const Interview = () => {
             <Icon d={icons.loader} size={40} color={C.purple} />
           </div>
           <h2 style={{ ...s.h2, marginTop: '1rem' }}>Preparing your interview</h2>
-          <p style={{ ...s.body, marginTop: '0.4rem' }}>AI is generating personalised questions…</p>
+          <p style={{ ...s.body, marginTop: '0.4rem' }}>{loadingMessage}</p>
+          <p style={{ ...s.body, fontSize: '0.8rem', marginTop: '1rem', color: C.grey400 }}>
+            This may take 30-45 seconds
+          </p>
+          
+          {/* Manual retry button */}
+          <button 
+            onClick={() => {
+              setStatus('initial');
+              setTimeout(() => startInterview(), 500);
+            }}
+            style={{
+              ...s.btn,
+              ...s.btnOutline,
+              marginTop: '1.5rem',
+              height: '36px',
+              fontSize: '0.8rem'
+            }}
+          >
+            <Icon d={icons.refresh} size={14} color={C.purple} />
+            Retry Now
+          </button>
         </CenterBlock>
       </CenteredCard>
     </Page>
@@ -558,7 +685,7 @@ const Interview = () => {
           </p>
           <div style={{ ...s.chip(C.purpleLight, C.purple), marginTop: '1rem' }}>
             <Icon d={icons.arrowRight} size={13} color={C.purple} />
-            Redirecting to report
+            Redirecting...
           </div>
         </CenterBlock>
       </CenteredCard>
@@ -570,10 +697,8 @@ const Interview = () => {
     <Page>
       <div style={s.container}>
         <div style={s.card}>
-          {/* Top accent strip */}
           <div style={{ height: 5, background: `linear-gradient(90deg, ${C.purple}, ${C.purpleMid})` }} />
           <div style={s.cardPad}>
-            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>
                 <div style={s.label}>AI Interview</div>
@@ -590,7 +715,6 @@ const Interview = () => {
 
             <div style={s.divider} />
 
-            {/* Guidelines */}
             <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ ...s.label, marginBottom: '1rem' }}>Before you begin</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -635,13 +759,11 @@ const Interview = () => {
     <Page>
       <div style={s.container}>
         <div style={s.card}>
-          {/* Progress */}
           <div style={s.progressTrack}>
             <div style={s.progressFill(progress)} />
           </div>
 
           <div style={s.cardPad}>
-            {/* Header row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>
                 <div style={s.label}>Question {questionNumber} of {totalQuestions}</div>
@@ -649,7 +771,7 @@ const Interview = () => {
                   {job.title} — {job.company}
                 </div>}
               </div>
-              {/* Timer pill */}
+              
               {status === 'recording' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px',
                   padding: '6px 14px', borderRadius: '999px',
@@ -669,7 +791,6 @@ const Interview = () => {
               )}
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{ ...s.notice(C.redLight, `${C.red}50`, C.red), marginBottom: '1.25rem' }}>
                 <Icon d={icons.alert} size={16} color={C.red} />
@@ -677,7 +798,6 @@ const Interview = () => {
               </div>
             )}
 
-            {/* Question */}
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ ...s.label, marginBottom: '8px' }}>Current Question</div>
               <div style={s.questionBox}>{currentQuestion}</div>
@@ -686,7 +806,6 @@ const Interview = () => {
             <div style={s.divider} />
             <div style={{ marginTop: '1.5rem' }}>
 
-              {/* Video feed (always shown when recording, else smaller preview) */}
               {(status === 'recording' || inputMode === 'voice') && (
                 <div style={{ ...s.videoWrap, marginBottom: '1.25rem' }}>
                   <video ref={videoRef} autoPlay muted style={s.video} />
@@ -699,15 +818,20 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Mode tabs */}
               {status === 'ready' && !processing && (
                 <div style={{ ...s.tabRow, marginBottom: '1.25rem' }}>
-                  <button style={s.tab(inputMode === 'text')} onClick={() => { setInputMode('text'); setError(''); }}>
+                  <button 
+                    style={s.tab(inputMode === 'text')} 
+                    onClick={() => { setInputMode('text'); setError(''); }}
+                  >
                     <Icon d={icons.type} size={15} color={inputMode === 'text' ? C.purple : C.grey600} />
                     Text Mode
                   </button>
                   {voiceAvailable && (
-                    <button style={s.tab(inputMode === 'voice')} onClick={() => { setInputMode('voice'); setError(''); }}>
+                    <button 
+                      style={s.tab(inputMode === 'voice')} 
+                      onClick={() => { setInputMode('voice'); setError(''); }}
+                    >
                       <Icon d={icons.mic} size={15} color={inputMode === 'voice' ? C.purple : C.grey600} />
                       Voice Mode
                     </button>
@@ -715,7 +839,6 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Text input */}
               {status === 'ready' && inputMode === 'text' && !processing && (
                 <div style={{ marginBottom: '1rem' }}>
                   <textarea
@@ -733,7 +856,6 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Voice warning */}
               {status === 'ready' && inputMode === 'voice' && !processing && (
                 <div style={{ ...s.notice(C.amberLight, `${C.amber}60`, C.amber), marginBottom: '1rem' }}>
                   <Icon d={icons.alert} size={16} color={C.amber} />
@@ -741,9 +863,7 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Action buttons */}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                {/* Cancel always visible when ready */}
                 {(status === 'ready') && !processing && (
                   <button style={{ ...s.btn, ...s.btnGhost }} onClick={cancelInterview}>
                     Cancel
@@ -785,7 +905,6 @@ const Interview = () => {
                 )}
               </div>
 
-              {/* Status line */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '1rem', justifyContent: 'flex-end' }}>
                 {status === 'ready' && inputMode === 'text' && !processing && (
                   <><div style={s.dot(C.blue)} /><span style={{ ...s.body, fontSize: '0.78rem' }}>Ready — type your answer above</span></>
