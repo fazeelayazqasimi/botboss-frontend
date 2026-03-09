@@ -209,8 +209,8 @@ const Report = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://Fazeelayazq-botboss-backend.hf.space';
-
+const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
+  
   useEffect(() => { fetchReport(); }, [sessionId]);
 
   const fetchReport = async () => {
