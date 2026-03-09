@@ -37,6 +37,7 @@ const ic = {
   briefcase:   'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
   users:       'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   send:        'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  eyeOff:      'M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22',
 };
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ const C = {
   tealLight:   '#CCFBF1',
 };
 
+// Helper functions
 const scoreColor = (n) => {
   if (n >= 80) return C.green;
   if (n >= 60) return C.blue;
@@ -84,6 +86,12 @@ const scoreLabel = (n) => {
   if (n >= 60) return 'Good';
   if (n >= 40) return 'Average';
   return 'Needs Work';
+};
+const scoreIcon = (n) => {
+  if (n >= 80) return '🌟';
+  if (n >= 60) return '👍';
+  if (n >= 40) return '👌';
+  return '💪';
 };
 
 const recColor = (r = '') => {
@@ -169,39 +177,115 @@ const btn = {
 };
 
 // ─── Circular progress ring ───────────────────────────────────────────────────
-const Ring = ({ value, size = 100, stroke = 8 }) => {
+const Ring = ({ value, size = 100, stroke = 8, showPercentage = true }) => {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (value / 100) * circ;
   const color = scoreColor(value);
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={C.grey100} strokeWidth={stroke} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={color} strokeWidth={stroke}
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-    </svg>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={C.grey100} strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.8s ease' }} />
+      </svg>
+      <div style={{ 
+        position: 'absolute', 
+        inset: 0, 
+        display: 'flex', 
+        alignItems: 'center',
+        justifyContent: 'center', 
+        flexDirection: 'column', 
+        gap: 2 
+      }}>
+        {showPercentage ? (
+          <>
+            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: C.grey900, lineHeight: 1 }}>
+              {value}%
+            </span>
+          </>
+        ) : (
+          <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>
+            {scoreIcon(value)}
+          </span>
+        )}
+      </div>
+    </div>
   );
 };
 
-// ─── Score metric card ────────────────────────────────────────────────────────
-const MetricCard = ({ icon, label: lbl, value }) => (
+// ─── Score metric card (with percentage toggle) ──────────────────────────────
+const MetricCard = ({ icon, label: lbl, value, showPercentage = true }) => (
   <div style={{ ...card, padding: '1.25rem', textAlign: 'center' }}>
-    <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.5rem' }}>
-      <Ring value={value} size={88} stroke={7} />
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
-        <Icon d={icon} size={15} color={scoreColor(value)} />
-        <span style={{ fontSize: '1rem', fontWeight: 700, color: C.grey900, lineHeight: 1 }}>{value}%</span>
-      </div>
+    <Ring value={value} size={88} stroke={7} showPercentage={showPercentage} />
+    <div style={{ ...label, display: 'block', marginBottom: '4px', marginTop: '8px' }}>{lbl}</div>
+    <div style={chip(scoreBg(value), scoreColor(value))}>
+      {scoreLabel(value)}
     </div>
-    <div style={{ ...label, display: 'block', marginBottom: '4px' }}>{lbl}</div>
-    <div style={chip(scoreBg(value), scoreColor(value))}>{scoreLabel(value)}</div>
   </div>
 );
+
+// ─── Question item with percentage toggle ─────────────────────────────────────
+const QuestionItem = ({ qa, index, showPercentage = true }) => {
+  const qScore = qa.score || 0;
+  const isText = qa.mode === 'text' || !qa.mode;
+  
+  return (
+    <div style={{ border: `1px solid ${C.grey200}`, borderRadius: '12px',
+      overflow: 'hidden', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.875rem 1.125rem', background: C.grey50,
+        borderBottom: `1px solid ${C.grey200}`, gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={chip(C.purpleLight, C.purple)}>Q{qa.question_number || index + 1}</span>
+          <span style={chip(isText ? C.blueLight : C.amberLight, isText ? C.blue : C.amber)}>
+            <Icon d={isText ? ic.type : ic.mic} size={11} color={isText ? C.blue : C.amber} />
+            {isText ? 'Text' : 'Voice'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: 80, height: 6, borderRadius: 3, background: C.grey200, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${qScore}%`, background: scoreColor(qScore),
+              borderRadius: 3, transition: 'width 0.6s ease' }} />
+          </div>
+          {showPercentage ? (
+            <span style={chip(scoreBg(qScore), scoreColor(qScore))}>{qScore}%</span>
+          ) : (
+            <span style={chip(scoreBg(qScore), scoreColor(qScore))}>
+              {scoreLabel(qScore)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '1rem 1.125rem' }}>
+        <p style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', fontWeight: 600,
+          color: C.grey900, lineHeight: 1.6 }}>{qa.question}</p>
+        <div style={{ background: C.grey50, border: `1px solid ${C.grey100}`,
+          borderRadius: '8px', padding: '0.875rem', marginBottom: '0.75rem' }}>
+          <div style={{ ...label, marginBottom: '6px' }}>Candidate's Answer</div>
+          <p style={{ ...body, fontSize: '0.85rem', margin: 0, whiteSpace: 'pre-wrap' }}>
+            {qa.answer || 'No answer recorded'}
+          </p>
+        </div>
+        {qa.feedback && (
+          <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start',
+            padding: '0.75rem', background: C.purpleLight, borderRadius: '8px',
+            border: `1px solid ${C.purple}20` }}>
+            <Icon d={ic.helpCircle} size={15} color={C.purple} />
+            <p style={{ ...body, fontSize: '0.83rem', margin: 0, color: C.purpleDark }}>
+              <strong>Feedback:</strong> {qa.feedback}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Report = () => {
@@ -286,8 +370,9 @@ const Report = () => {
     return false;
   };
 
-  // Determine view type
+  // Determine view type and whether to show percentages
   const viewType = isCandidateView() ? 'candidate' : (isCompanyView() ? 'company' : 'public');
+  const showPercentage = viewType === 'company'; // Only companies see percentages
 
   if (loading) return (
     <Page>
@@ -355,7 +440,7 @@ const Report = () => {
                 </div>
               )}
               
-              {/* 🔥 Show candidate/company info based on view */}
+              {/* Show candidate/company info based on view */}
               {viewType === 'company' && candidateInfo && (
                 <div style={chip(C.blueLight, C.blue)}>
                   <Icon d={ic.users} size={11} color={C.blue} />
@@ -368,6 +453,15 @@ const Report = () => {
                   Company: {companyInfo.name}
                 </div>
               )}
+              
+              {/* 🔥 View type indicator */}
+              <div style={chip(
+                viewType === 'company' ? C.greenLight : (viewType === 'candidate' ? C.blueLight : C.grey100),
+                viewType === 'company' ? C.green : (viewType === 'candidate' ? C.blue : C.grey600)
+              )}>
+                <Icon d={viewType === 'company' ? ic.briefcase : (viewType === 'candidate' ? ic.users : ic.eye)} size={11} />
+                {viewType === 'company' ? 'Company View' : (viewType === 'candidate' ? 'Candidate View' : 'Public View')}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -392,10 +486,18 @@ const Report = () => {
             <div>
               <div style={{ ...label, color: `${C.white}80` }}>Overall Score</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
-                <span style={{ fontSize: '3.5rem', fontWeight: 800, color: C.white, lineHeight: 1 }}>
-                  {overall}
-                </span>
-                <span style={{ fontSize: '1.5rem', color: `${C.white}80`, fontWeight: 600 }}>/ 100</span>
+                {showPercentage ? (
+                  <>
+                    <span style={{ fontSize: '3.5rem', fontWeight: 800, color: C.white, lineHeight: 1 }}>
+                      {overall}
+                    </span>
+                    <span style={{ fontSize: '1.5rem', color: `${C.white}80`, fontWeight: 600 }}>/ 100</span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: '2.5rem', fontWeight: 800, color: C.white, lineHeight: 1 }}>
+                    {scoreLabel(overall)} {scoreIcon(overall)}
+                  </span>
+                )}
               </div>
               <div style={{ marginTop: '10px' }}>
                 <span style={{ ...chip(`${C.white}20`, C.white), fontSize: '0.85rem',
@@ -415,7 +517,11 @@ const Report = () => {
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
                 justifyContent: 'center' }}>
-                <Icon d={ic.star} size={28} color={C.white} />
+                {showPercentage ? (
+                  <Icon d={ic.star} size={28} color={C.white} />
+                ) : (
+                  <span style={{ fontSize: '1.8rem', color: C.white }}>{scoreIcon(overall)}</span>
+                )}
               </div>
             </div>
           </div>
@@ -424,9 +530,24 @@ const Report = () => {
         {/* ── Score metrics ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '12px', marginBottom: '1.25rem' }}>
-          <MetricCard icon={ic.eye}    label="Eye Contact" value={report.eye_contact_score || 0} />
-          <MetricCard icon={ic.zap}    label="Confidence"  value={report.confidence_score  || 0} />
-          <MetricCard icon={ic.target} label="Clarity"     value={report.clarity_score     || 0} />
+          <MetricCard 
+            icon={ic.eye}    
+            label="Eye Contact" 
+            value={report.eye_contact_score || 0} 
+            showPercentage={showPercentage} 
+          />
+          <MetricCard 
+            icon={ic.zap}    
+            label="Confidence"  
+            value={report.confidence_score  || 0} 
+            showPercentage={showPercentage} 
+          />
+          <MetricCard 
+            icon={ic.target} 
+            label="Clarity"     
+            value={report.clarity_score     || 0} 
+            showPercentage={showPercentage} 
+          />
           <div style={{ ...card, padding: '1.25rem', textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.5rem' }}>
               <svg width={88} height={88} style={{ transform: 'rotate(-90deg)' }}>
@@ -536,55 +657,14 @@ const Report = () => {
           </div>
 
           <div style={{ padding: '1rem 1.25rem' }}>
-            {report.question_analysis?.length > 0 ? report.question_analysis.map((qa, i) => {
-              const qScore = qa.score || 0;
-              const isText = qa.mode === 'text' || !qa.mode;
-              return (
-                <div key={i} style={{ border: `1px solid ${C.grey200}`, borderRadius: '12px',
-                  overflow: 'hidden', marginBottom: i < report.question_analysis.length - 1 ? '12px' : 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '0.875rem 1.125rem', background: C.grey50,
-                    borderBottom: `1px solid ${C.grey200}`, gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={chip(C.purpleLight, C.purple)}>Q{qa.question_number || i + 1}</span>
-                      <span style={chip(isText ? C.blueLight : C.amberLight, isText ? C.blue : C.amber)}>
-                        <Icon d={isText ? ic.type : ic.mic} size={11} color={isText ? C.blue : C.amber} />
-                        {isText ? 'Text' : 'Voice'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: 80, height: 6, borderRadius: 3, background: C.grey200, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${qScore}%`, background: scoreColor(qScore),
-                          borderRadius: 3, transition: 'width 0.6s ease' }} />
-                      </div>
-                      <span style={chip(scoreBg(qScore), scoreColor(qScore))}>{qScore}%</span>
-                    </div>
-                  </div>
-
-                  <div style={{ padding: '1rem 1.125rem' }}>
-                    <p style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', fontWeight: 600,
-                      color: C.grey900, lineHeight: 1.6 }}>{qa.question}</p>
-                    <div style={{ background: C.grey50, border: `1px solid ${C.grey100}`,
-                      borderRadius: '8px', padding: '0.875rem', marginBottom: '0.75rem' }}>
-                      <div style={{ ...label, marginBottom: '6px' }}>Candidate's Answer</div>
-                      <p style={{ ...body, fontSize: '0.85rem', margin: 0, whiteSpace: 'pre-wrap' }}>
-                        {qa.answer || 'No answer recorded'}
-                      </p>
-                    </div>
-                    {qa.feedback && (
-                      <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start',
-                        padding: '0.75rem', background: C.purpleLight, borderRadius: '8px',
-                        border: `1px solid ${C.purple}20` }}>
-                        <Icon d={ic.helpCircle} size={15} color={C.purple} />
-                        <p style={{ ...body, fontSize: '0.83rem', margin: 0, color: C.purpleDark }}>
-                          <strong>Feedback:</strong> {qa.feedback}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }) : (
+            {report.question_analysis?.length > 0 ? report.question_analysis.map((qa, i) => (
+              <QuestionItem 
+                key={i} 
+                qa={qa} 
+                index={i} 
+                showPercentage={showPercentage} 
+              />
+            )) : (
               <p style={{ ...body, textAlign: 'center', padding: '2rem 0' }}>
                 No question analysis available.
               </p>
