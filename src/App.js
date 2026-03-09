@@ -14,46 +14,62 @@ import Report from './pages/Report';
 import CompanyProfileEdit from './pages/CompanyProfileEdit';
 import MyJobs from './pages/MyJobs';
 
-// Backend URL - update karo apne hisaab se
+// Backend URL
 const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
 
 function App() {
-  const [backendReady, setBackendReady] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'connected', 'failed'
   const [retryCount, setRetryCount] = useState(0);
+  const [message, setMessage] = useState('Waking up backend server...');
 
   useEffect(() => {
     checkBackendConnection();
   }, [retryCount]);
 
   const checkBackendConnection = async () => {
+    setMessage('Connecting to server...');
+    
     try {
-      console.log('Checking backend connection...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
+
       const response = await fetch(`${API_URL}/health`, {
         method: 'GET',
         mode: 'cors',
         cache: 'no-cache',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         console.log('✅ Backend connected successfully');
-        setBackendReady(true);
-        setLoading(false);
+        setBackendStatus('connected');
       } else {
-        console.log('⚠️ Backend not ready, retrying...');
-        setTimeout(() => setRetryCount(retryCount + 1), 3000);
+        console.log('⚠️ Backend returned error, retrying...');
+        setMessage('Backend is waking up... (takes 30-60 seconds)');
+        setTimeout(() => setRetryCount(retryCount + 1), 5000);
       }
     } catch (error) {
-      console.log('❌ Backend connection failed, retrying...', error.message);
-      setTimeout(() => setRetryCount(retryCount + 1), 3000);
+      console.log('❌ Connection attempt failed:', error.message);
+      
+      if (error.name === 'AbortError') {
+        setMessage('Connection timeout - backend still sleeping...');
+      } else {
+        setMessage('Cannot reach backend server...');
+      }
+      
+      // Retry with increasing delay
+      const delay = Math.min(3000 * (retryCount + 1), 15000);
+      setTimeout(() => setRetryCount(retryCount + 1), delay);
     }
   };
 
   // Loading screen
-  if (loading) {
+  if (backendStatus !== 'connected') {
     return (
       <div style={{
         minHeight: '100vh',
@@ -63,7 +79,9 @@ function App() {
         alignItems: 'center',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         color: 'white',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: 'Arial, sans-serif',
+        padding: '20px',
+        textAlign: 'center'
       }}>
         <div style={{
           width: '80px',
@@ -76,11 +94,15 @@ function App() {
         }}></div>
         
         <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>
-          {backendReady ? 'Starting Application...' : 'Waking up Backend Server...'}
+          {message}
         </h2>
         
         <p style={{ fontSize: '16px', opacity: 0.9, marginBottom: '20px' }}>
-          {!backendReady && 'This may take 30-60 seconds on first load'}
+          Free backend takes 30-60 seconds to wake up
+        </p>
+        
+        <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '30px' }}>
+          Attempt {retryCount + 1} • Please wait...
         </p>
         
         <button
@@ -94,10 +116,13 @@ function App() {
             fontSize: '16px',
             fontWeight: 'bold',
             cursor: 'pointer',
-            marginTop: '20px'
+            marginTop: '20px',
+            transition: 'transform 0.2s'
           }}
+          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
         >
-          Retry Connection
+          Retry Now
         </button>
 
         <style>{`
