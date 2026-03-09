@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -8,16 +8,14 @@ import CompanyCard from '../components/CompanyCard';
 import { initializeLocalStorage, getStats } from '../data/mockData';
 
 const Landing = () => {
-  const [stats, setStats] = useState({
-    totalJobs: 0,
-    totalCompanies: 0,
-    activeCandidates: 0,
-    placements: 0,
-  });
+  const [stats, setStats] = useState({ totalJobs: 0, totalCompanies: 0, activeCandidates: 0, placements: 0 });
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [topCompanies, setTopCompanies] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
+  const [openFaq, setOpenFaq] = useState(null);
+  const [counted, setCounted] = useState(false);
+  const statsRef = useRef(null);
 
   useEffect(() => {
     initializeLocalStorage();
@@ -28,723 +26,590 @@ const Landing = () => {
     setTopCompanies(companies.slice(0, 4));
   }, []);
 
-  const CategoryIcon = ({ name }) => {
-    const icons = {
-      Technology: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-        </svg>
-      ),
-      Marketing: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-        </svg>
-      ),
-      Finance: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-        </svg>
-      ),
-      Design: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
-          <line x1="12" y1="2" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="22" y2="12"/>
-        </svg>
-      ),
-      Healthcare: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-          <path d="M12 8v8M8 12h8" strokeLinecap="round"/>
-        </svg>
-      ),
-      Education: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-        </svg>
-      ),
-      Sales: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-        </svg>
-      ),
-      Engineering: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor">
-          <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/>
-        </svg>
-      ),
-    };
-    return icons[name] || null;
-  };
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting && !counted) setCounted(true); },
+      { threshold: 0.3 }
+    );
+    if (statsRef.current) observer.observe(statsRef.current);
+    return () => observer.disconnect();
+  }, [counted]);
+
+  const faqs = [
+    {
+      q: 'How does the AI interview process work?',
+      a: 'After applying to a job, shortlisted candidates receive an AI-powered interview link. The system asks role-specific questions, evaluates answers in real time, and generates a detailed performance report — covering clarity, confidence, eye contact, and more.',
+    },
+    {
+      q: 'Is BotBoss free to use for job seekers?',
+      a: 'Yes, candidates can create profiles, browse jobs, and complete AI interviews completely free. Companies have access to a free tier as well, with premium features available for high-volume hiring needs.',
+    },
+    {
+      q: 'How accurate is the AI scoring system?',
+      a: 'Our AI evaluates multiple dimensions of communication including verbal clarity, response relevance, and non-verbal cues. Scores are calibrated against industry benchmarks and reviewed continuously to ensure fairness and accuracy.',
+    },
+    {
+      q: 'Can companies customize the interview questions?',
+      a: 'Absolutely. When posting a job, companies can define custom question sets, set difficulty levels, and choose between text-based or voice interview formats.',
+    },
+    {
+      q: 'How long does it take to get results after an interview?',
+      a: 'Reports are generated instantly once the interview session ends. Both companies and candidates can view their respective reports from the dashboard immediately after completion.',
+    },
+    {
+      q: 'Is my interview data kept private?',
+      a: 'Yes. All interview recordings and reports are encrypted and only accessible to the candidate and the hiring company. We never share your data with third parties.',
+    },
+  ];
 
   const categories = [
-    { label: 'Technology', count: '1,240+' },
-    { label: 'Marketing', count: '860+' },
-    { label: 'Finance', count: '540+' },
-    { label: 'Design', count: '420+' },
-    { label: 'Healthcare', count: '390+' },
-    { label: 'Education', count: '310+' },
-    { label: 'Sales', count: '670+' },
-    { label: 'Engineering', count: '780+' },
+    { label: 'Technology', count: '1,240+', emoji: '💻' },
+    { label: 'Marketing', count: '860+', emoji: '📣' },
+    { label: 'Finance', count: '540+', emoji: '💹' },
+    { label: 'Design', count: '420+', emoji: '🎨' },
+    { label: 'Healthcare', count: '390+', emoji: '🏥' },
+    { label: 'Education', count: '310+', emoji: '📚' },
+    { label: 'Sales', count: '670+', emoji: '🤝' },
+    { label: 'Engineering', count: '780+', emoji: '⚙️' },
   ];
 
   const steps = [
-    {
-      num: '01',
-      title: 'Create Your Profile',
-      desc: 'Sign up and build your professional profile in minutes. Add skills, experience, and preferences.',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor" width="22" height="22">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
-      ),
-    },
-    {
-      num: '02',
-      title: 'Browse & Apply',
-      desc: 'Explore thousands of verified job listings. Apply with one click using your saved profile.',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor" width="22" height="22">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-      ),
-    },
-    {
-      num: '03',
-      title: 'AI Interview',
-      desc: 'Complete an intelligent AI-powered interview that adapts to your role and highlights your strengths.',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor" width="22" height="22">
-          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-        </svg>
-      ),
-    },
-    {
-      num: '04',
-      title: 'Get Hired',
-      desc: 'Receive detailed reports and connect directly with hiring managers ready to onboard you.',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor" width="22" height="22">
-          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-        </svg>
-      ),
-    },
+    { num: '01', title: 'Create Your Profile', desc: 'Sign up and build your professional profile in minutes. Add skills, experience, and preferences.' },
+    { num: '02', title: 'Browse & Apply', desc: 'Explore thousands of verified job listings. Apply with one click using your saved profile.' },
+    { num: '03', title: 'AI Interview', desc: 'Complete an intelligent AI-powered interview that adapts to your role and highlights your strengths.' },
+    { num: '04', title: 'Get Hired', desc: 'Receive detailed reports and connect directly with hiring managers ready to onboard you.' },
   ];
 
   const testimonials = [
     {
-      text: 'The AI interview feature saved us 40+ hours a week on initial screening. We now only meet candidates who are genuinely the right fit.',
-      name: 'Rajesh Kumar',
-      role: 'HR Manager, TechCorp',
-      initials: 'RK',
-      rating: 5,
+      text: 'The AI interview system cut our screening time by over 60%. We only meet candidates who are genuinely the right fit — no more wasted first rounds.',
+      name: 'Sarah Mitchell',
+      role: 'Head of Talent, NovaTech',
+      initials: 'SM',
     },
     {
-      text: 'I landed my dream job within 3 weeks. The platform is seamless and the AI interview felt fair and thorough throughout the process.',
-      name: 'Priya Singh',
-      role: 'Frontend Developer',
-      initials: 'PS',
-      rating: 5,
+      text: 'I was nervous about an AI interview, but it felt structured and fair. Got detailed feedback on my performance and landed the role within two weeks.',
+      name: 'James Okafor',
+      role: 'Product Designer',
+      initials: 'JO',
     },
     {
-      text: 'As a startup, finding quality talent quickly is critical. This platform delivered exactly that with zero compromise on quality.',
-      name: 'Ankit Mehta',
-      role: 'Founder, StartupHub',
-      initials: 'AM',
-      rating: 5,
+      text: 'As a growing startup, we needed a smarter way to hire fast. BotBoss delivered — shortlisted candidates arrive pre-evaluated and ready to go.',
+      name: 'Lena Kaufmann',
+      role: 'CEO, BuildFlow',
+      initials: 'LK',
     },
   ];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .lp {
-          font-family: 'Poppins', sans-serif;
-          color: #1c0b4b;
-          background: #fff;
-          -webkit-font-smoothing: antialiased;
+        :root {
+          --ink:    #0A0A0F;
+          --ink2:   #1A1A2E;
+          --muted:  #6E6E8A;
+          --faint:  #F2F2F7;
+          --line:   #E4E4EF;
+          --accent: #5B4CFF;
+          --accent2:#FF4C8B;
+          --accentL:#EAE8FF;
+          --white:  #FFFFFF;
+          --card:   #FFFFFF;
+          --r:      16px;
+          --ff:     'DM Sans', sans-serif;
+          --ffd:    'Syne', sans-serif;
         }
 
-        /* ─── HERO ─── */
-        .lp-hero {
-          background: #f8f7ff;
-          padding: 5.5rem 2rem 0;
-          position: relative;
-          overflow: hidden;
-        }
-        .lp-hero::before {
+        .bb { font-family: var(--ff); color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; }
+
+        /* ── NOISE TEXTURE OVERLAY ── */
+        .bb::before {
           content: '';
+          position: fixed; inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+          opacity: 0.025;
+          pointer-events: none;
+          z-index: 9999;
+        }
+
+        /* ── HERO ── */
+        .bb-hero {
+          min-height: 100svh;
+          background: var(--ink2);
+          display: flex; flex-direction: column;
+          position: relative; overflow: hidden;
+        }
+        .bb-hero-bg {
+          position: absolute; inset: 0; pointer-events: none;
+        }
+        .bb-hero-orb1 {
           position: absolute;
-          top: -200px; right: -200px;
           width: 700px; height: 700px;
-          background: radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 65%);
-          pointer-events: none;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(91,76,255,0.35) 0%, transparent 70%);
+          top: -200px; right: -150px;
+          animation: bbFloat 8s ease-in-out infinite;
         }
-        .lp-hero::after {
-          content: '';
+        .bb-hero-orb2 {
           position: absolute;
-          bottom: 80px; left: -100px;
-          width: 350px; height: 350px;
-          background: radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 65%);
-          pointer-events: none;
+          width: 400px; height: 400px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,76,139,0.2) 0%, transparent 70%);
+          bottom: -100px; left: -100px;
+          animation: bbFloat 10s ease-in-out infinite reverse;
         }
-        .lp-hero-inner {
-          max-width: 860px;
-          margin: 0 auto;
-          padding-bottom: 4rem;
-          text-align: center;
-          position: relative;
-          z-index: 1;
+        .bb-hero-grid {
+          position: absolute; inset: 0;
+          background-image:
+            linear-gradient(rgba(91,76,255,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(91,76,255,0.06) 1px, transparent 1px);
+          background-size: 60px 60px;
         }
-        .lp-hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: #ede9fe;
-          color: #6d28d9;
-          font-size: 0.72rem;
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          padding: 0.4rem 1rem;
-          border-radius: 100px;
+        @keyframes bbFloat {
+          0%,100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-30px) scale(1.05); }
+        }
+
+        .bb-hero-body {
+          flex: 1; display: flex; align-items: center; justify-content: center;
+          padding: 7rem 2rem 4rem;
+          position: relative; z-index: 1; text-align: center;
+        }
+        .bb-hero-inner { max-width: 820px; }
+
+        .bb-pill {
+          display: inline-flex; align-items: center; gap: 8px;
+          border: 1px solid rgba(91,76,255,0.4);
+          background: rgba(91,76,255,0.12);
+          color: #A89FFF;
+          font-family: var(--ff); font-size: 0.72rem; font-weight: 600;
+          letter-spacing: 0.12em; text-transform: uppercase;
+          padding: 0.45rem 1.1rem; border-radius: 100px;
+          margin-bottom: 1.75rem;
+          backdrop-filter: blur(8px);
+        }
+        .bb-pill-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #A89FFF;
+          animation: bbPulse 2s infinite;
+        }
+        @keyframes bbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.6)} }
+
+        .bb-hero-h1 {
+          font-family: var(--ffd);
+          font-size: clamp(2.4rem, 6vw, 4.2rem);
+          font-weight: 800;
+          line-height: 1.1;
+          color: var(--white);
+          letter-spacing: -0.03em;
           margin-bottom: 1.5rem;
         }
-        .lp-badge-dot {
-          width: 6px; height: 6px;
-          background: #7c3aed;
-          border-radius: 50%;
-          animation: lp-pulse 2s infinite;
+        .bb-hero-h1 em {
+          font-style: normal;
+          background: linear-gradient(135deg, #A89FFF 0%, #FF4C8B 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
-        @keyframes lp-pulse {
-          0%,100% { opacity:1; transform:scale(1); }
-          50% { opacity:0.4; transform:scale(1.5); }
-        }
-        .lp-hero-title {
-          font-size: clamp(2.1rem, 5vw, 3.3rem);
-          font-weight: 800;
-          line-height: 1.2;
-          color: #1c0b4b;
-          letter-spacing: -0.03em;
-          margin-bottom: 1.25rem;
-        }
-        .lp-hero-title span { color: #7c3aed; }
-        .lp-hero-sub {
-          font-size: 1rem;
-          color: #6b7280;
-          font-weight: 400;
-          line-height: 1.75;
-          margin-bottom: 2.5rem;
-          max-width: 560px;
-          margin-left: auto;
-          margin-right: auto;
+        .bb-hero-sub {
+          font-size: 1.05rem; color: rgba(255,255,255,0.55);
+          line-height: 1.75; font-weight: 300;
+          max-width: 560px; margin: 0 auto 2.75rem;
         }
 
-        /* Search */
-        .lp-search {
-          background: #fff;
-          border-radius: 16px;
-          box-shadow: 0 8px 40px rgba(28,11,75,0.1);
-          padding: 0.5rem;
-          display: flex;
-          align-items: center;
-          max-width: 780px;
-          margin: 0 auto 1.75rem;
-          border: 1px solid #ede9fe;
+        /* Search Bar */
+        .bb-search {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          backdrop-filter: blur(20px);
+          border-radius: 18px;
+          padding: 6px;
+          display: flex; align-items: center;
+          max-width: 740px; margin: 0 auto 1.5rem;
+          gap: 4px;
         }
-        .lp-search-field {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-          padding: 0.75rem 1.25rem;
+        .bb-sf {
+          flex: 1; display: flex; align-items: center; gap: 8px;
+          padding: 0.7rem 1.1rem;
         }
-        .lp-search-field svg {
-          width: 18px; height: 18px;
-          stroke: #9ca3af; fill: none; flex-shrink: 0;
+        .bb-sf svg { width:17px;height:17px;stroke:rgba(255,255,255,0.35);fill:none;flex-shrink:0; }
+        .bb-sf input {
+          border: none; outline: none; background: transparent;
+          font-family: var(--ff); font-size: 0.9rem; font-weight: 400;
+          color: var(--white); width: 100%;
         }
-        .lp-search-field input {
-          border: none; outline: none;
-          font-family: 'Poppins', sans-serif;
-          font-size: 0.9rem;
-          color: #1c0b4b;
-          width: 100%;
-          background: transparent;
+        .bb-sf input::placeholder { color: rgba(255,255,255,0.3); }
+        .bb-sdiv { width:1px;height:30px;background:rgba(255,255,255,0.1);flex-shrink:0; }
+        .bb-sbtn {
+          background: linear-gradient(135deg, var(--accent), #8B7FFF);
+          color: white; border: none; border-radius: 13px;
+          padding: 0.85rem 2rem; font-family: var(--ff);
+          font-size: 0.875rem; font-weight: 600; cursor: pointer;
+          white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
         }
-        .lp-search-field input::placeholder { color: #9ca3af; }
-        .lp-search-sep {
-          width: 1px; height: 36px;
-          background: #e5e7eb; flex-shrink: 0;
-        }
-        .lp-search-btn {
-          background: #7c3aed;
-          color: white;
-          border: none;
-          border-radius: 12px;
-          padding: 0.875rem 2rem;
-          font-family: 'Poppins', sans-serif;
-          font-size: 0.88rem;
-          font-weight: 600;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: background 0.2s, transform 0.2s;
-          margin: 0.25rem;
-        }
-        .lp-search-btn:hover { background: #6d28d9; transform: translateY(-1px); }
+        .bb-sbtn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        .lp-popular {
-          font-size: 0.8rem;
-          color: #9ca3af;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-          justify-content: center;
+        .bb-tags {
+          display: flex; align-items: center; gap: 8px;
+          flex-wrap: wrap; justify-content: center;
+          font-size: 0.78rem; color: rgba(255,255,255,0.35);
         }
-        .lp-popular strong { color: #6b7280; font-weight: 500; }
-        .lp-ptag {
-          background: white;
-          border: 1px solid #e5e7eb;
-          color: #4b5563;
-          padding: 0.25rem 0.75rem;
-          border-radius: 100px;
-          font-size: 0.78rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          text-decoration: none;
-          display: inline-block;
+        .bb-tag {
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.55);
+          padding: 0.3rem 0.85rem; border-radius: 100px;
+          font-size: 0.78rem; font-weight: 500; cursor: pointer;
+          transition: all 0.2s; text-decoration: none; display:inline-block;
         }
-        .lp-ptag:hover { border-color: #7c3aed; color: #7c3aed; background: #f5f3ff; }
+        .bb-tag:hover { border-color: rgba(168,159,255,0.5); color: #A89FFF; background: rgba(91,76,255,0.1); }
 
-        /* Stats Strip */
-        .lp-stats-strip {
-          background: white;
-          border-top: 1px solid #f3f4f6;
-          margin-top: 3rem;
+        /* Stats bar */
+        .bb-statsbar {
+          background: rgba(255,255,255,0.04);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          position: relative; z-index: 1;
         }
-        .lp-stats-strip-inner {
-          max-width: 1300px;
-          margin: 0 auto;
+        .bb-statsbar-inner {
+          max-width: 1200px; margin: 0 auto;
           padding: 1.75rem 2rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid; grid-template-columns: repeat(4,1fr);
         }
-        .lp-sstat {
-          flex: 1;
-          text-align: center;
-          padding: 0 2rem;
-          position: relative;
+        .bb-stat {
+          text-align: center; padding: 0 1.5rem; position: relative;
         }
-        .lp-sstat:not(:last-child)::after {
-          content: '';
-          position: absolute;
-          right: 0; top: 50%;
-          transform: translateY(-50%);
-          height: 32px; width: 1px;
-          background: #e5e7eb;
+        .bb-stat:not(:last-child)::after {
+          content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+          height:28px;width:1px;background:rgba(255,255,255,0.08);
         }
-        .lp-sstat-num {
-          display: block;
-          font-size: 1.65rem;
-          font-weight: 800;
-          color: #1c0b4b;
-          letter-spacing: -0.03em;
-          line-height: 1;
-          margin-bottom: 0.3rem;
+        .bb-stat-num {
+          display:block;font-family:var(--ffd);
+          font-size: 1.8rem;font-weight:800;
+          color:var(--white);letter-spacing:-0.03em;line-height:1;margin-bottom:4px;
         }
-        .lp-sstat-label {
-          font-size: 0.75rem;
-          color: #9ca3af;
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
+        .bb-stat-lbl { font-size:0.72rem;color:rgba(255,255,255,0.35);font-weight:500;text-transform:uppercase;letter-spacing:0.09em; }
 
-        /* ─── COMMON SECTION STYLES ─── */
-        .lp-section { padding: 5rem 2rem; }
-        .lp-section-inner { max-width: 1300px; margin: 0 auto; }
-        .lp-section-bg { background: #f8f7ff; }
+        /* ── SECTION COMMONS ── */
+        .bb-sec { padding: 6rem 2rem; }
+        .bb-sec-alt { background: var(--faint); }
+        .bb-wrap { max-width: 1200px; margin: 0 auto; }
 
-        .lp-sec-head { text-align: center; margin-bottom: 2.75rem; }
-        .lp-sec-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-bottom: 2.75rem;
+        .bb-sec-label {
+          font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em;
+          text-transform: uppercase; color: var(--accent);
+          margin-bottom: 0.6rem;
         }
-
-        .lp-tag {
-          font-size: 0.72rem;
-          font-weight: 600;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: #7c3aed;
+        .bb-sec-h2 {
+          font-family: var(--ffd); font-size: clamp(1.6rem, 3vw, 2.2rem);
+          font-weight: 800; color: var(--ink); letter-spacing: -0.03em; line-height: 1.2;
           margin-bottom: 0.5rem;
         }
-        .lp-title {
-          font-size: 1.85rem;
-          font-weight: 800;
-          color: #1c0b4b;
-          letter-spacing: -0.03em;
-          line-height: 1.25;
-          margin-bottom: 0.4rem;
-        }
-        .lp-desc { font-size: 0.88rem; color: #9ca3af; }
+        .bb-sec-sub { font-size: 0.9rem; color: var(--muted); font-weight: 400; }
 
-        .lp-viewall {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          font-size: 0.84rem;
-          font-weight: 600;
-          color: #7c3aed;
-          text-decoration: none;
-          padding: 0.6rem 1.25rem;
-          border: 1.5px solid #ede9fe;
-          border-radius: 10px;
-          background: white;
-          transition: all 0.2s;
-          white-space: nowrap;
-          font-family: 'Poppins', sans-serif;
+        .bb-sec-row {
+          display: flex; justify-content: space-between; align-items: flex-end;
+          flex-wrap: wrap; gap: 1rem; margin-bottom: 2.5rem;
         }
-        .lp-viewall:hover { background: #f5f3ff; border-color: #7c3aed; }
+        .bb-sec-center { text-align: center; margin-bottom: 2.75rem; }
 
-        /* ─── CATEGORIES ─── */
-        .lp-cat-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 1.25rem;
+        .bb-link {
+          display: inline-flex; align-items: center; gap: 6px;
+          font-size: 0.85rem; font-weight: 600; color: var(--accent);
+          text-decoration: none; padding: 0.55rem 1.25rem;
+          border: 1.5px solid var(--accentL); border-radius: 10px;
+          background: var(--white); transition: all 0.2s; white-space: nowrap;
+          font-family: var(--ff);
         }
-        .lp-cat-card {
-          background: #fff;
-          border: 1.5px solid #f3f4f6;
-          border-radius: 16px;
-          padding: 1.5rem 1.25rem;
-          text-align: center;
-          cursor: pointer;
-          transition: all 0.22s ease;
-          text-decoration: none;
-          display: block;
-        }
-        .lp-cat-card:hover {
-          border-color: #7c3aed;
-          box-shadow: 0 8px 32px rgba(124,58,237,0.1);
-          transform: translateY(-3px);
-        }
-        .lp-cat-icon {
-          width: 52px; height: 52px;
-          background: #f5f3ff;
-          border-radius: 14px;
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 1rem;
-          transition: background 0.22s;
-        }
-        .lp-cat-card:hover .lp-cat-icon { background: #ede9fe; }
-        .lp-cat-icon svg { width: 22px; height: 22px; stroke: #7c3aed; fill: none; }
-        .lp-cat-name { font-size: 0.875rem; font-weight: 600; color: #1c0b4b; margin-bottom: 0.3rem; }
-        .lp-cat-count { font-size: 0.75rem; color: #7c3aed; font-weight: 500; }
+        .bb-link:hover { background: var(--accentL); border-color: var(--accent); }
 
-        /* ─── JOBS GRID ─── */
-        .lp-jobs-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.25rem;
+        /* ── CATEGORIES ── */
+        .bb-cat-grid {
+          display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem;
         }
-
-        /* ─── COMPANIES GRID ─── */
-        .lp-comp-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 1.25rem;
+        .bb-cat {
+          background: var(--white); border: 1.5px solid var(--line);
+          border-radius: var(--r); padding: 1.5rem 1.25rem;
+          text-align: center; cursor: pointer;
+          transition: all 0.22s ease; text-decoration: none; display: block;
         }
-
-        /* ─── HOW IT WORKS ─── */
-        .lp-steps {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 1.5rem;
-          position: relative;
-        }
-        .lp-steps::before {
-          content: '';
-          position: absolute;
-          top: 26px;
-          left: calc(12.5% + 12px);
-          right: calc(12.5% + 12px);
-          height: 1px;
-          background: repeating-linear-gradient(
-            to right, #ddd6fe 0px, #ddd6fe 6px, transparent 6px, transparent 13px
-          );
-          z-index: 0;
-        }
-        .lp-step {
-          background: white;
-          border: 1.5px solid #f3f4f6;
-          border-radius: 20px;
-          padding: 2rem 1.5rem 1.75rem;
-          position: relative;
-          z-index: 1;
-          transition: all 0.22s ease;
-        }
-        .lp-step:hover {
-          border-color: #c4b5fd;
-          box-shadow: 0 12px 36px rgba(124,58,237,0.1);
+        .bb-cat:hover {
+          border-color: var(--accent);
+          box-shadow: 0 10px 36px rgba(91,76,255,0.12);
           transform: translateY(-4px);
         }
-        .lp-step-num {
-          width: 44px; height: 44px;
-          background: #7c3aed;
-          color: white;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 800;
-          font-size: 0.82rem;
-          margin-bottom: 1.25rem;
-          box-shadow: 0 6px 18px rgba(124,58,237,0.3);
-          letter-spacing: 0.02em;
-        }
-        .lp-step-icon {
-          width: 44px; height: 44px;
-          background: #f5f3ff;
-          border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 1.25rem;
-          color: #7c3aed;
-        }
-        .lp-step-title { font-size: 0.975rem; font-weight: 700; color: #1c0b4b; margin-bottom: 0.6rem; }
-        .lp-step-desc { font-size: 0.83rem; color: #9ca3af; line-height: 1.65; }
+        .bb-cat-em { font-size: 2rem; display: block; margin-bottom: 0.75rem; line-height:1; }
+        .bb-cat-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; font-family: var(--ffd); }
+        .bb-cat-n { font-size: 0.75rem; color: var(--accent); font-weight: 500; }
 
-        /* ─── TESTIMONIALS ─── */
-        .lp-testimonials {
-          padding: 5rem 2rem;
-          background: #1c0b4b;
+        /* ── JOBS / COMPANIES GRID ── */
+        .bb-jobs-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.1rem; }
+        .bb-comp-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.1rem; }
+
+        /* ── HOW IT WORKS ── */
+        .bb-steps {
+          display: grid; grid-template-columns: repeat(4,1fr);
+          gap: 1.5rem; position: relative;
         }
-        .lp-test-inner { max-width: 1300px; margin: 0 auto; }
-        .lp-test-head { text-align: center; margin-bottom: 3rem; }
-        .lp-test-head .lp-tag { color: #a78bfa; }
-        .lp-test-head .lp-title { color: white; }
-        .lp-test-head .lp-desc { color: #6b7280; }
-        .lp-test-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.5rem;
+        .bb-steps::before {
+          content:''; position:absolute;
+          top: 22px; left: calc(12.5% + 14px); right: calc(12.5% + 14px);
+          height: 1px;
+          background: repeating-linear-gradient(to right, #c4b5fd 0, #c4b5fd 6px, transparent 6px, transparent 14px);
+          z-index: 0;
         }
-        .lp-tcard {
+        .bb-step {
+          background: var(--white); border: 1.5px solid var(--line);
+          border-radius: 20px; padding: 2rem 1.5rem 1.75rem;
+          position: relative; z-index: 1;
+          transition: all 0.22s ease;
+        }
+        .bb-step:hover {
+          border-color: var(--accent);
+          box-shadow: 0 14px 40px rgba(91,76,255,0.1);
+          transform: translateY(-5px);
+        }
+        .bb-step-badge {
+          width: 44px; height: 44px;
+          background: linear-gradient(135deg, var(--accent), #8B7FFF);
+          border-radius: 12px; display: flex; align-items: center; justify-content: center;
+          font-family: var(--ffd); font-weight: 800; font-size: 0.8rem;
+          color: white; margin-bottom: 1.25rem;
+          box-shadow: 0 6px 20px rgba(91,76,255,0.3);
+        }
+        .bb-step-title { font-family: var(--ffd); font-size: 0.975rem; font-weight: 700; color: var(--ink); margin-bottom: 0.6rem; }
+        .bb-step-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.65; }
+
+        /* ── TESTIMONIALS ── */
+        .bb-test-sec { background: var(--ink2); padding: 6rem 2rem; }
+        .bb-test-h2 { color: var(--white); }
+        .bb-test-label { color: #A89FFF; }
+        .bb-test-sub { color: rgba(255,255,255,0.35); }
+        .bb-test-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; }
+        .bb-tcard {
           background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 20px;
-          padding: 2rem;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 20px; padding: 2rem;
           transition: all 0.22s;
         }
-        .lp-tcard:hover {
-          background: rgba(124,58,237,0.12);
-          border-color: rgba(167,139,250,0.25);
+        .bb-tcard:hover {
+          background: rgba(91,76,255,0.1);
+          border-color: rgba(168,159,255,0.2);
           transform: translateY(-3px);
         }
-        .lp-tstars { display: flex; gap: 3px; margin-bottom: 1.25rem; }
-        .lp-tstar { color: #f59e0b; font-size: 0.85rem; }
-        .lp-ttext {
-          font-size: 0.875rem;
-          color: #d1d5db;
-          line-height: 1.75;
-          margin-bottom: 1.75rem;
+        .bb-tquote {
+          font-size: 2.5rem; line-height: 1; color: var(--accent);
+          font-family: Georgia, serif; margin-bottom: 0.75rem; opacity: 0.6;
         }
-        .lp-tauthor { display: flex; align-items: center; gap: 0.75rem; }
-        .lp-tavatar {
-          width: 40px; height: 40px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #7c3aed, #a78bfa);
+        .bb-ttext { font-size: 0.875rem; color: rgba(255,255,255,0.65); line-height: 1.8; margin-bottom: 1.75rem; }
+        .bb-tauthor { display: flex; align-items: center; gap: 0.875rem; }
+        .bb-tavatar {
+          width: 42px; height: 42px; border-radius: 10px;
+          background: linear-gradient(135deg, var(--accent), #FF4C8B);
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; font-size: 0.85rem; color: white; flex-shrink: 0;
+          font-family: var(--ffd);
         }
-        .lp-tname { font-size: 0.875rem; font-weight: 700; color: white; margin-bottom: 0.15rem; }
-        .lp-trole { font-size: 0.75rem; color: #6b7280; }
+        .bb-tname { font-size: 0.875rem; font-weight: 700; color: white; font-family: var(--ffd); }
+        .bb-trole { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-top: 2px; }
 
-        /* ─── CTA ─── */
-        .lp-cta { padding: 5rem 2rem; background: white; }
-        .lp-cta-box {
-          max-width: 1300px;
-          margin: 0 auto;
-          background: linear-gradient(130deg, #7c3aed 0%, #4c1d95 100%);
-          border-radius: 28px;
-          padding: 4.5rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 3rem;
-          position: relative;
-          overflow: hidden;
+        /* ── FAQ ── */
+        .bb-faq-list { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        .bb-faq-item {
+          border: 1.5px solid var(--line);
+          border-radius: var(--r); overflow: hidden;
+          background: var(--white);
+          transition: border-color 0.2s;
         }
-        .lp-cta-box::before {
-          content: '';
-          position: absolute;
-          top: -120px; right: -120px;
-          width: 400px; height: 400px;
-          background: radial-gradient(circle, rgba(255,255,255,0.09) 0%, transparent 70%);
-          pointer-events: none;
+        .bb-faq-item.open { border-color: var(--accent); }
+        .bb-faq-q {
+          width: 100%; text-align: left;
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 1.2rem 1.5rem; gap: 1rem;
+          background: transparent; border: none; cursor: pointer;
+          font-family: var(--ff); font-size: 0.95rem; font-weight: 600;
+          color: var(--ink); transition: color 0.2s;
         }
-        .lp-cta-box::after {
-          content: '';
-          position: absolute;
-          bottom: -80px; left: 200px;
-          width: 280px; height: 280px;
-          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-          pointer-events: none;
+        .bb-faq-item.open .bb-faq-q { color: var(--accent); }
+        .bb-faq-icon {
+          width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+          background: var(--faint); display: flex; align-items: center; justify-content: center;
+          transition: all 0.25s; font-size: 1.1rem; line-height: 1; color: var(--muted);
         }
-        .lp-cta-left { position: relative; z-index: 1; max-width: 580px; }
-        .lp-cta-badge {
+        .bb-faq-item.open .bb-faq-icon { background: var(--accentL); color: var(--accent); transform: rotate(45deg); }
+        .bb-faq-a {
+          padding: 0 1.5rem 1.2rem; font-size: 0.875rem; color: var(--muted);
+          line-height: 1.75; border-top: 1px solid var(--line);
+          padding-top: 1rem;
+        }
+
+        /* ── CTA ── */
+        .bb-cta-sec { padding: 6rem 2rem; background: var(--white); }
+        .bb-cta-box {
+          max-width: 1200px; margin: 0 auto;
+          background: linear-gradient(135deg, var(--ink2) 0%, #0D0B2E 100%);
+          border-radius: 28px; padding: 4.5rem;
+          display: flex; justify-content: space-between; align-items: center;
+          gap: 3rem; flex-wrap: wrap; position: relative; overflow: hidden;
+        }
+        .bb-cta-box::before {
+          content:''; position:absolute; top:-150px;right:-100px;
+          width:450px;height:450px;border-radius:50%;
+          background: radial-gradient(circle, rgba(91,76,255,0.25) 0%, transparent 70%);
+          pointer-events:none;
+        }
+        .bb-cta-box::after {
+          content:''; position:absolute; bottom:-80px; left:150px;
+          width:300px;height:300px;border-radius:50%;
+          background: radial-gradient(circle, rgba(255,76,139,0.12) 0%, transparent 70%);
+          pointer-events:none;
+        }
+        .bb-cta-left { position: relative; z-index: 1; max-width: 560px; }
+        .bb-cta-badge {
           display: inline-block;
-          font-size: 0.72rem; font-weight: 600;
-          letter-spacing: 0.1em; text-transform: uppercase;
-          color: #c4b5fd;
-          background: rgba(255,255,255,0.1);
-          padding: 0.35rem 0.875rem;
-          border-radius: 100px;
-          margin-bottom: 1.25rem;
+          font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+          text-transform: uppercase; color: #A89FFF;
+          background: rgba(168,159,255,0.12); border: 1px solid rgba(168,159,255,0.2);
+          padding: 0.35rem 0.9rem; border-radius: 100px; margin-bottom: 1.25rem;
         }
-        .lp-cta-title {
-          font-size: 2.1rem; font-weight: 800;
-          color: white; letter-spacing: -0.03em;
-          line-height: 1.2; margin-bottom: 0.875rem;
+        .bb-cta-h2 {
+          font-family: var(--ffd); font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+          font-weight: 800; color: var(--white);
+          letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 1rem;
         }
-        .lp-cta-sub { font-size: 0.95rem; color: rgba(255,255,255,0.65); line-height: 1.65; }
-        .lp-cta-btns {
-          display: flex; flex-direction: column;
-          gap: 0.875rem; position: relative; z-index: 1; flex-shrink: 0;
+        .bb-cta-sub { font-size: 0.95rem; color: rgba(255,255,255,0.5); line-height: 1.7; }
+        .bb-cta-btns { display: flex; flex-direction: column; gap: 0.875rem; position:relative;z-index:1;flex-shrink:0; }
+        .bb-btn-primary {
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 0.95rem 2.25rem; border-radius: 12px;
+          background: linear-gradient(135deg, var(--accent), #8B7FFF);
+          color: white; border: none; cursor: pointer;
+          font-family: var(--ff); font-size: 0.9rem; font-weight: 600;
+          text-decoration: none; transition: all 0.2s; white-space: nowrap;
+          box-shadow: 0 8px 24px rgba(91,76,255,0.35);
         }
-        .lp-btn-white {
-          display: inline-flex; align-items: center; justify-content: center;
-          gap: 0.5rem; padding: 0.9rem 2rem;
-          background: white; color: #7c3aed;
-          text-decoration: none; border-radius: 12px;
-          font-weight: 700; font-size: 0.88rem;
-          font-family: 'Poppins', sans-serif;
-          transition: all 0.2s; white-space: nowrap;
-          border: none; cursor: pointer;
+        .bb-btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .bb-btn-ghost {
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 0.95rem 2.25rem; border-radius: 12px;
+          background: transparent; color: rgba(255,255,255,0.7);
+          border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer;
+          font-family: var(--ff); font-size: 0.9rem; font-weight: 600;
+          text-decoration: none; transition: all 0.2s; white-space: nowrap;
         }
-        .lp-btn-white:hover { background: #f5f3ff; transform: translateY(-2px); }
-        .lp-btn-ghost {
-          display: inline-flex; align-items: center; justify-content: center;
-          gap: 0.5rem; padding: 0.9rem 2rem;
-          background: transparent; color: white;
-          text-decoration: none; border-radius: 12px;
-          font-weight: 600; font-size: 0.88rem;
-          font-family: 'Poppins', sans-serif;
-          transition: all 0.2s; white-space: nowrap;
-          border: 1.5px solid rgba(255,255,255,0.3); cursor: pointer;
-        }
-        .lp-btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.6); }
+        .bb-btn-ghost:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.4); }
 
-        /* ─── EMPTY STATE ─── */
-        .lp-empty {
+        /* ── EMPTY STATE ── */
+        .bb-empty {
           text-align: center; padding: 3rem 1rem;
-          color: #9ca3af; font-size: 0.88rem; font-weight: 500;
-          grid-column: 1 / -1;
+          color: var(--muted); font-size: 0.88rem; grid-column: 1 / -1;
         }
-        .lp-empty-icon { margin-bottom: 0.75rem; opacity: 0.6; }
 
-        /* ─── RESPONSIVE ─── */
+        /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
-          .lp-cat-grid { grid-template-columns: repeat(4, 1fr); }
-          .lp-jobs-grid { grid-template-columns: repeat(2, 1fr); }
-          .lp-comp-grid { grid-template-columns: repeat(2, 1fr); }
-          .lp-steps { grid-template-columns: repeat(2, 1fr); }
-          .lp-steps::before { display: none; }
-          .lp-test-grid { grid-template-columns: repeat(2, 1fr); }
+          .bb-cat-grid { grid-template-columns: repeat(4,1fr); }
+          .bb-jobs-grid { grid-template-columns: repeat(2,1fr); }
+          .bb-comp-grid { grid-template-columns: repeat(2,1fr); }
+          .bb-steps { grid-template-columns: repeat(2,1fr); }
+          .bb-steps::before { display: none; }
+          .bb-test-grid { grid-template-columns: repeat(2,1fr); }
         }
         @media (max-width: 768px) {
-          .lp-hero { padding: 4.5rem 1.25rem 0; }
-          .lp-hero-inner { padding-bottom: 3rem; }
-          .lp-search { flex-direction: column; padding: 0.75rem; }
-          .lp-search-sep { display: none; }
-          .lp-search-btn { width: 100%; border-radius: 10px; margin: 0; }
-          .lp-stats-strip-inner { flex-wrap: wrap; }
-          .lp-sstat { min-width: 50%; padding: 1rem; }
-          .lp-sstat:not(:last-child)::after { display: none; }
-          .lp-cat-grid { grid-template-columns: repeat(2, 1fr); }
-          .lp-jobs-grid { grid-template-columns: 1fr; }
-          .lp-comp-grid { grid-template-columns: repeat(2, 1fr); }
-          .lp-steps { grid-template-columns: 1fr; }
-          .lp-test-grid { grid-template-columns: 1fr; }
-          .lp-cta-box { flex-direction: column; padding: 2.5rem 1.75rem; }
-          .lp-cta-btns { width: 100%; }
-          .lp-sec-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+          .bb-hero-body { padding: 6rem 1.25rem 3rem; }
+          .bb-search { flex-direction: column; }
+          .bb-sdiv { display: none; }
+          .bb-sbtn { width: 100%; border-radius: 12px; }
+          .bb-statsbar-inner { grid-template-columns: repeat(2,1fr); gap: 0; }
+          .bb-stat:not(:last-child)::after { display:none; }
+          .bb-stat { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+          .bb-cat-grid { grid-template-columns: repeat(2,1fr); }
+          .bb-jobs-grid { grid-template-columns: 1fr; }
+          .bb-comp-grid { grid-template-columns: repeat(2,1fr); }
+          .bb-steps { grid-template-columns: 1fr; }
+          .bb-test-grid { grid-template-columns: 1fr; }
+          .bb-cta-box { flex-direction: column; padding: 2.5rem 1.75rem; align-items: flex-start; }
+          .bb-cta-btns { width: 100%; }
+          .bb-btn-primary, .bb-btn-ghost { width: 100%; }
+          .bb-sec-row { flex-direction: column; align-items: flex-start; }
+          .bb-sec { padding: 4rem 1.25rem; }
+        }
+        @media (max-width: 480px) {
+          .bb-cat-grid { grid-template-columns: 1fr 1fr; }
+          .bb-comp-grid { grid-template-columns: 1fr; }
+          .bb-faq-q { font-size: 0.875rem; }
         }
       `}</style>
 
-      <div className="lp">
+      <div className="bb">
         <Navbar />
 
         {/* ── HERO ── */}
-        <section className="lp-hero">
-          <div className="lp-hero-inner">
-            <div className="lp-hero-badge">
-              <span className="lp-badge-dot" />
-              AI-Powered Hiring Platform
-            </div>
-            <h1 className="lp-hero-title">
-              Find Your Next Opportunity<br />
-              with <span>Intelligent Interviews</span>
-            </h1>
-            <p className="lp-hero-sub">
-              Connect top talent with the best companies. Our AI-driven platform screens smarter,
-              matches faster, and helps everyone find their perfect fit.
-            </p>
+        <section className="bb-hero">
+          <div className="bb-hero-bg">
+            <div className="bb-hero-orb1" />
+            <div className="bb-hero-orb2" />
+            <div className="bb-hero-grid" />
+          </div>
 
-            <div className="lp-search">
-              <div className="lp-search-field">
-                <svg viewBox="0 0 24 24" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Job title, keywords, or company"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
+          <div className="bb-hero-body">
+            <div className="bb-hero-inner">
+              <div className="bb-pill">
+                <span className="bb-pill-dot" />
+                AI-Powered Hiring Platform
               </div>
-              <div className="lp-search-sep" />
-              <div className="lp-search-field">
-                <svg viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-                <input
-                  type="text"
-                  placeholder="City or remote"
-                  value={searchLocation}
-                  onChange={e => setSearchLocation(e.target.value)}
-                />
-              </div>
-              <button className="lp-search-btn">Search Jobs</button>
-            </div>
+              <h1 className="bb-hero-h1">
+                Hire Smarter.<br />
+                Get Hired <em>Faster.</em>
+              </h1>
+              <p className="bb-hero-sub">
+                Connect top talent with leading companies through intelligent AI interviews
+                — screening smarter, matching faster, and eliminating guesswork.
+              </p>
 
-            <div className="lp-popular">
-              <strong>Popular:</strong>
-              {['React Developer', 'Product Manager', 'UI Designer', 'Data Analyst'].map(tag => (
-                <Link key={tag} to="/jobs" className="lp-ptag">{tag}</Link>
-              ))}
+              <div className="bb-search">
+                <div className="bb-sf">
+                  <svg viewBox="0 0 24 24" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input type="text" placeholder="Job title or keywords"
+                    value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                </div>
+                <div className="bb-sdiv" />
+                <div className="bb-sf">
+                  <svg viewBox="0 0 24 24" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <input type="text" placeholder="City or remote"
+                    value={searchLocation} onChange={e => setSearchLocation(e.target.value)} />
+                </div>
+                <button className="bb-sbtn">Search Jobs</button>
+              </div>
+
+              <div className="bb-tags">
+                <span>Popular:</span>
+                {['React Developer', 'Product Manager', 'UI Designer', 'Data Analyst'].map(tag => (
+                  <Link key={tag} to="/jobs" className="bb-tag">{tag}</Link>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="lp-stats-strip">
-            <div className="lp-stats-strip-inner">
+          {/* Stats bar */}
+          <div className="bb-statsbar" ref={statsRef}>
+            <div className="bb-statsbar-inner">
               {[
-                { num: `${stats.activeJobs || '1,500'}+`, label: 'Active Jobs' },
+                { num: `${stats.totalJobs || '1,500'}+`, label: 'Active Jobs' },
                 { num: `${stats.totalCompanies || '500'}+`, label: 'Companies' },
-                { num: `${stats.activeCandidates || '10,000'}+`, label: 'Candidates' },
+                { num: `${stats.activeCandidates || '10K'}+`, label: 'Candidates' },
                 { num: `${stats.placements || '94'}%`, label: 'Success Rate' },
               ].map(s => (
-                <div key={s.label} className="lp-sstat">
-                  <span className="lp-sstat-num">{s.num}</span>
-                  <span className="lp-sstat-label">{s.label}</span>
+                <div key={s.label} className="bb-stat">
+                  <span className="bb-stat-num">{s.num}</span>
+                  <span className="bb-stat-lbl">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -752,19 +617,19 @@ const Landing = () => {
         </section>
 
         {/* ── CATEGORIES ── */}
-        <section className="lp-section">
-          <div className="lp-section-inner">
-            <div className="lp-sec-head">
-              <p className="lp-tag">Explore</p>
-              <h2 className="lp-title">Browse by Category</h2>
-              <p className="lp-desc">Thousands of jobs across every industry</p>
+        <section className="bb-sec">
+          <div className="bb-wrap">
+            <div className="bb-sec-center">
+              <p className="bb-sec-label">Explore</p>
+              <h2 className="bb-sec-h2">Browse by Category</h2>
+              <p className="bb-sec-sub">Thousands of jobs across every industry</p>
             </div>
-            <div className="lp-cat-grid">
+            <div className="bb-cat-grid">
               {categories.map(cat => (
-                <Link to="/jobs" key={cat.label} className="lp-cat-card">
-                  <div className="lp-cat-icon"><CategoryIcon name={cat.label} /></div>
-                  <div className="lp-cat-name">{cat.label}</div>
-                  <div className="lp-cat-count">{cat.count} jobs</div>
+                <Link to="/jobs" key={cat.label} className="bb-cat">
+                  <span className="bb-cat-em">{cat.emoji}</span>
+                  <div className="bb-cat-name">{cat.label}</div>
+                  <div className="bb-cat-n">{cat.count} jobs</div>
                 </Link>
               ))}
             </div>
@@ -772,76 +637,57 @@ const Landing = () => {
         </section>
 
         {/* ── FEATURED JOBS ── */}
-        <section className="lp-section lp-section-bg">
-          <div className="lp-section-inner">
-            <div className="lp-sec-row">
+        <section className="bb-sec bb-sec-alt">
+          <div className="bb-wrap">
+            <div className="bb-sec-row">
               <div>
-                <p className="lp-tag">Opportunities</p>
-                <h2 className="lp-title">Featured Jobs</h2>
-                <p className="lp-desc">Handpicked positions from top employers</p>
+                <p className="bb-sec-label">Opportunities</p>
+                <h2 className="bb-sec-h2">Featured Jobs</h2>
+                <p className="bb-sec-sub">Handpicked positions from top employers</p>
               </div>
-              <Link to="/jobs" className="lp-viewall">Browse All Jobs →</Link>
+              <Link to="/jobs" className="bb-link">Browse All Jobs →</Link>
             </div>
-            <div className="lp-jobs-grid">
-              {featuredJobs.length > 0 ? (
-                featuredJobs.map(job => <JobCard key={job.id} job={job} />)
-              ) : (
-                <div className="lp-empty">
-                  <div className="lp-empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#c4b5fd" width="40" height="40">
-                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-                    </svg>
-                  </div>
-                  <div>No jobs posted yet. Be the first to post!</div>
-                </div>
-              )}
+            <div className="bb-jobs-grid">
+              {featuredJobs.length > 0
+                ? featuredJobs.map(job => <JobCard key={job.id} job={job} />)
+                : <div className="bb-empty">No jobs posted yet. Be the first to post!</div>}
             </div>
           </div>
         </section>
 
         {/* ── TOP COMPANIES ── */}
-        <section className="lp-section">
-          <div className="lp-section-inner">
-            <div className="lp-sec-row">
+        <section className="bb-sec">
+          <div className="bb-wrap">
+            <div className="bb-sec-row">
               <div>
-                <p className="lp-tag">Employers</p>
-                <h2 className="lp-title">Top Companies Hiring</h2>
-                <p className="lp-desc">Join innovative teams building the future</p>
+                <p className="bb-sec-label">Employers</p>
+                <h2 className="bb-sec-h2">Top Companies Hiring</h2>
+                <p className="bb-sec-sub">Join innovative teams building the future</p>
               </div>
-              <Link to="/companies" className="lp-viewall">View All Companies →</Link>
+              <Link to="/companies" className="bb-link">View All Companies →</Link>
             </div>
-            <div className="lp-comp-grid">
-              {topCompanies.length > 0 ? (
-                topCompanies.map(company => <CompanyCard key={company.id} company={company} />)
-              ) : (
-                <div className="lp-empty">
-                  <div className="lp-empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#c4b5fd" width="40" height="40">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-                    </svg>
-                  </div>
-                  <div>Companies will appear here once they sign up.</div>
-                </div>
-              )}
+            <div className="bb-comp-grid">
+              {topCompanies.length > 0
+                ? topCompanies.map(company => <CompanyCard key={company.id} company={company} />)
+                : <div className="bb-empty">Companies will appear here once they sign up.</div>}
             </div>
           </div>
         </section>
 
         {/* ── HOW IT WORKS ── */}
-        <section className="lp-section lp-section-bg">
-          <div className="lp-section-inner">
-            <div className="lp-sec-head">
-              <p className="lp-tag">Process</p>
-              <h2 className="lp-title">How It Works</h2>
-              <p className="lp-desc">Four simple steps to smarter hiring</p>
+        <section className="bb-sec bb-sec-alt">
+          <div className="bb-wrap">
+            <div className="bb-sec-center">
+              <p className="bb-sec-label">Process</p>
+              <h2 className="bb-sec-h2">How It Works</h2>
+              <p className="bb-sec-sub">Four simple steps to smarter hiring</p>
             </div>
-            <div className="lp-steps">
+            <div className="bb-steps">
               {steps.map(step => (
-                <div key={step.num} className="lp-step">
-                  <div className="lp-step-num">{step.num}</div>
-                  <div className="lp-step-icon">{step.icon}</div>
-                  <div className="lp-step-title">{step.title}</div>
-                  <p className="lp-step-desc">{step.desc}</p>
+                <div key={step.num} className="bb-step">
+                  <div className="bb-step-badge">{step.num}</div>
+                  <div className="bb-step-title">{step.title}</div>
+                  <p className="bb-step-desc">{step.desc}</p>
                 </div>
               ))}
             </div>
@@ -849,27 +695,23 @@ const Landing = () => {
         </section>
 
         {/* ── TESTIMONIALS ── */}
-        <section className="lp-testimonials">
-          <div className="lp-test-inner">
-            <div className="lp-test-head lp-sec-head">
-              <p className="lp-tag">Reviews</p>
-              <h2 className="lp-title">Trusted by Thousands</h2>
-              <p className="lp-desc">What hiring teams and candidates say about us</p>
+        <section className="bb-test-sec">
+          <div className="bb-wrap">
+            <div className="bb-sec-center">
+              <p className="bb-sec-label bb-test-label">Reviews</p>
+              <h2 className="bb-sec-h2 bb-test-h2">Trusted by Thousands</h2>
+              <p className="bb-sec-sub bb-test-sub">What hiring teams and candidates say about us</p>
             </div>
-            <div className="lp-test-grid">
+            <div className="bb-test-grid">
               {testimonials.map((t, i) => (
-                <div key={i} className="lp-tcard">
-                  <div className="lp-tstars">
-                    {Array.from({ length: t.rating }).map((_, j) => (
-                      <span key={j} className="lp-tstar">★</span>
-                    ))}
-                  </div>
-                  <p className="lp-ttext">{t.text}</p>
-                  <div className="lp-tauthor">
-                    <div className="lp-tavatar">{t.initials}</div>
+                <div key={i} className="bb-tcard">
+                  <div className="bb-tquote">"</div>
+                  <p className="bb-ttext">{t.text}</p>
+                  <div className="bb-tauthor">
+                    <div className="bb-tavatar">{t.initials}</div>
                     <div>
-                      <div className="lp-tname">{t.name}</div>
-                      <div className="lp-trole">{t.role}</div>
+                      <div className="bb-tname">{t.name}</div>
+                      <div className="bb-trole">{t.role}</div>
                     </div>
                   </div>
                 </div>
@@ -878,24 +720,46 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* ── FAQ ── */}
+        <section className="bb-sec">
+          <div className="bb-wrap">
+            <div className="bb-sec-center">
+              <p className="bb-sec-label">FAQ</p>
+              <h2 className="bb-sec-h2">Frequently Asked Questions</h2>
+              <p className="bb-sec-sub">Everything you need to know about BotBoss</p>
+            </div>
+            <div className="bb-faq-list">
+              {faqs.map((faq, i) => (
+                <div key={i} className={`bb-faq-item${openFaq === i ? ' open' : ''}`}>
+                  <button className="bb-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                    <span>{faq.q}</span>
+                    <span className="bb-faq-icon">+</span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="bb-faq-a">{faq.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── CTA ── */}
-        <section className="lp-cta">
-          <div className="lp-cta-box">
-            <div className="lp-cta-left">
-              <span className="lp-cta-badge">Get Started Today</span>
-              <h2 className="lp-cta-title">
-                Ready to Transform<br />Your Hiring Process?
-              </h2>
-              <p className="lp-cta-sub">
+        <section className="bb-cta-sec">
+          <div className="bb-cta-box">
+            <div className="bb-cta-left">
+              <span className="bb-cta-badge">Get Started Today</span>
+              <h2 className="bb-cta-h2">Ready to Transform<br />Your Hiring Process?</h2>
+              <p className="bb-cta-sub">
                 Join thousands of companies and candidates using AI-powered interviews
                 to find the perfect match — faster, smarter, and more accurately.
               </p>
             </div>
-            <div className="lp-cta-btns">
-              <Link to="/signup?type=candidate" className="lp-btn-white">
+            <div className="bb-cta-btns">
+              <Link to="/signup?type=candidate" className="bb-btn-primary">
                 Find Jobs Now
               </Link>
-              <Link to="/signup?type=company" className="lp-btn-ghost">
+              <Link to="/signup?type=company" className="bb-btn-ghost">
                 Post a Job for Free
               </Link>
             </div>
