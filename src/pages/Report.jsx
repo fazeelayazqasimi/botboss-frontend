@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -34,6 +34,9 @@ const ic = {
   star:        'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   calendar:    'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18',
   hash:        'M4 9h16M4 15h16M10 3l-4 18M14 3l-4 18',
+  briefcase:   'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
+  users:       'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+  send:        'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
 };
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -203,14 +206,24 @@ const MetricCard = ({ icon, label: lbl, value }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Report = () => {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
+  const [candidateInfo, setCandidateInfo] = useState(null);
+  const [companyInfo, setCompanyInfo] = useState(null);
 
   // ✅ FIXED: Correct API URL
   const API_URL = (process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space').replace(/\/$/, '');
 
-  useEffect(() => { fetchReport(); }, [sessionId]);
+  useEffect(() => {
+    // Get current user
+    const userData = JSON.parse(localStorage.getItem('user'));
+    setUser(userData);
+    
+    fetchReport();
+  }, [sessionId]);
 
   const fetchReport = async () => {
     try {
@@ -219,11 +232,62 @@ const Report = () => {
       if (!r.ok) throw new Error(r.status === 404
         ? 'Report not found. The interview may not be completed yet.'
         : 'Failed to fetch report');
-      setReport(await r.json());
+      
+      const reportData = await r.json();
+      setReport(reportData);
+      
+      // Try to get candidate info from localStorage
+      try {
+        const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
+        const found = candidates.find(c => c.id === reportData.candidateId || c.name === reportData.candidate_name);
+        if (found) setCandidateInfo(found);
+      } catch (e) { console.log('No candidate info'); }
+
+      // Try to get company info from localStorage
+      try {
+        const companies = JSON.parse(localStorage.getItem('companies') || '[]');
+        const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+        const job = jobs.find(j => j.id === reportData.jobId);
+        if (job) {
+          const found = companies.find(c => c.id === job.companyId);
+          if (found) setCompanyInfo(found);
+        }
+      } catch (e) { console.log('No company info'); }
+
     } catch (e) {
       setError(e.message || 'Could not load interview report');
     } finally { setLoading(false); }
   };
+
+  // Check if current user is the candidate who gave the interview
+  const isCandidateView = () => {
+    if (!user || !report) return false;
+    if (user.type !== 'candidate') return false;
+    
+    // Check if this candidate owns the report
+    if (report.candidateId && user.profileId) {
+      return report.candidateId === user.profileId;
+    }
+    if (report.candidate_name && user.name) {
+      return report.candidate_name === user.name;
+    }
+    return false;
+  };
+
+  // Check if current user is the company who posted the job
+  const isCompanyView = () => {
+    if (!user || !report) return false;
+    if (user.type !== 'company') return false;
+    
+    // Check if this company owns the job
+    if (report.jobId && companyInfo) {
+      return true; // We have company info, so it's likely their job
+    }
+    return false;
+  };
+
+  // Determine view type
+  const viewType = isCandidateView() ? 'candidate' : (isCompanyView() ? 'company' : 'public');
 
   if (loading) return (
     <Page>
@@ -255,9 +319,9 @@ const Report = () => {
               <Icon d={ic.refresh} size={15} color={C.white} />
               Retry
             </button>
-            <Link to="/my-applications"
+            <Link to={user?.type === 'company' ? '/company/dashboard' : '/my-applications'}
               style={{ ...btn, background: C.grey100, color: C.grey700, border: `1px solid ${C.grey200}` }}>
-              My Applications
+              {user?.type === 'company' ? 'Dashboard' : 'My Applications'}
             </Link>
           </div>
         </div>
@@ -288,6 +352,20 @@ const Report = () => {
                 <div style={chip(C.grey100, C.grey600)}>
                   <Icon d={ic.calendar} size={11} color={C.grey600} />
                   {formatDate(report.completion_date || report.interview_date)}
+                </div>
+              )}
+              
+              {/* 🔥 Show candidate/company info based on view */}
+              {viewType === 'company' && candidateInfo && (
+                <div style={chip(C.blueLight, C.blue)}>
+                  <Icon d={ic.users} size={11} color={C.blue} />
+                  Candidate: {candidateInfo.name}
+                </div>
+              )}
+              {viewType === 'candidate' && companyInfo && (
+                <div style={chip(C.purpleLight, C.purple)}>
+                  <Icon d={ic.briefcase} size={11} color={C.purple} />
+                  Company: {companyInfo.name}
                 </div>
               )}
             </div>
@@ -488,7 +566,7 @@ const Report = () => {
                       color: C.grey900, lineHeight: 1.6 }}>{qa.question}</p>
                     <div style={{ background: C.grey50, border: `1px solid ${C.grey100}`,
                       borderRadius: '8px', padding: '0.875rem', marginBottom: '0.75rem' }}>
-                      <div style={{ ...label, marginBottom: '6px' }}>Your Answer</div>
+                      <div style={{ ...label, marginBottom: '6px' }}>Candidate's Answer</div>
                       <p style={{ ...body, fontSize: '0.85rem', margin: 0, whiteSpace: 'pre-wrap' }}>
                         {qa.answer || 'No answer recorded'}
                       </p>
@@ -514,13 +592,67 @@ const Report = () => {
           </div>
         </div>
 
+        {/* ── Company Contact Section (for candidate view) ── */}
+        {viewType === 'candidate' && companyInfo && (
+          <div style={{ ...card, marginBottom: '1.75rem', border: `1px solid ${C.blue}30`, background: C.blueLight }}>
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ ...label, color: C.blue }}>Next Steps</div>
+                <p style={{ ...body, color: C.grey900, marginTop: '4px', fontSize: '0.9rem' }}>
+                  The company has received your interview report. They will contact you if you're shortlisted.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Link to={`/company/${companyInfo.id}`} 
+                  style={{ ...btn, background: C.white, color: C.blue, border: `1.5px solid ${C.blue}` }}>
+                  <Icon d={ic.briefcase} size={14} color={C.blue} />
+                  View Company Profile
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Candidate Contact Section (for company view) ── */}
+        {viewType === 'company' && candidateInfo && (
+          <div style={{ ...card, marginBottom: '1.75rem', border: `1px solid ${C.green}30`, background: C.greenLight }}>
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ ...label, color: C.green }}>Candidate Contact</div>
+                <p style={{ ...body, color: C.grey900, marginTop: '4px', fontSize: '0.9rem' }}>
+                  {candidateInfo.name} • {candidateInfo.email}
+                </p>
+                {candidateInfo.phone && <p style={{ ...body, color: C.grey900, fontSize: '0.85rem' }}>{candidateInfo.phone}</p>}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => window.location.href = `mailto:${candidateInfo.email}`}
+                  style={{ ...btn, background: C.green, color: C.white }}>
+                  <Icon d={ic.send} size={14} color={C.white} />
+                  Contact Candidate
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Public view message ── */}
+        {viewType === 'public' && (
+          <div style={{ ...card, marginBottom: '1.75rem', background: C.grey50 }}>
+            <div style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>
+              <p style={{ ...body, color: C.grey600 }}>
+                This interview report is shared. Login to see more details.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Actions ── */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center',
           flexWrap: 'wrap', paddingBottom: '2rem' }}>
-          <Link to="/my-applications"
+          <Link to={user?.type === 'company' ? '/company/dashboard' : '/my-applications'}
             style={{ ...btn, background: C.grey100, color: C.grey700, border: `1px solid ${C.grey200}` }}>
             <Icon d={ic.arrowLeft} size={14} color={C.grey700} />
-            Back to Applications
+            {user?.type === 'company' ? 'Back to Dashboard' : 'Back to Applications'}
           </Link>
           <button onClick={() => window.print()}
             style={{ ...btn, background: C.purple, color: C.white, boxShadow: `0 2px 12px ${C.purple}35` }}>
