@@ -140,7 +140,7 @@ const CompanyDashboard = () => {
     shortlisted: 0, interviews: 0, completed: 0, hired: 0,
   });
 
-  const API_URL  = 'https://Fazeelayazq-botboss-backend.hf.space';
+  const API_URL  = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
   const navigate = useNavigate();
 
   useEffect(() => {
