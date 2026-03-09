@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { checkBackendHealth } from './services/api';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -14,62 +15,28 @@ import Report from './pages/Report';
 import CompanyProfileEdit from './pages/CompanyProfileEdit';
 import MyJobs from './pages/MyJobs';
 
-// Backend URL
-const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
-
 function App() {
-  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'connected', 'failed'
-  const [retryCount, setRetryCount] = useState(0);
-  const [message, setMessage] = useState('Waking up backend server...');
+  const [isConnected, setIsConnected] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [attempt, setAttempt] = useState(1);
 
   useEffect(() => {
-    checkBackendConnection();
-  }, [retryCount]);
-
-  const checkBackendConnection = async () => {
-    setMessage('Connecting to server...');
+    const connect = async () => {
+      const connected = await checkBackendHealth();
+      if (connected) {
+        setIsConnected(true);
+        setChecking(false);
+      } else {
+        setAttempt(attempt + 1);
+        setChecking(false);
+      }
+    };
     
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
+    connect();
+  }, [attempt]);
 
-      const response = await fetch(`${API_URL}/health`, {
-        method: 'GET',
-        mode: 'cors',
-        cache: 'no-cache',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        console.log('✅ Backend connected successfully');
-        setBackendStatus('connected');
-      } else {
-        console.log('⚠️ Backend returned error, retrying...');
-        setMessage('Backend is waking up... (takes 30-60 seconds)');
-        setTimeout(() => setRetryCount(retryCount + 1), 5000);
-      }
-    } catch (error) {
-      console.log('❌ Connection attempt failed:', error.message);
-      
-      if (error.name === 'AbortError') {
-        setMessage('Connection timeout - backend still sleeping...');
-      } else {
-        setMessage('Cannot reach backend server...');
-      }
-      
-      // Retry with increasing delay
-      const delay = Math.min(3000 * (retryCount + 1), 15000);
-      setTimeout(() => setRetryCount(retryCount + 1), delay);
-    }
-  };
-
-  // Loading screen
-  if (backendStatus !== 'connected') {
+  // Loading / Error screen
+  if (!isConnected) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -77,50 +44,51 @@ function App() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#1c0b4b',
         color: 'white',
         fontFamily: 'Arial, sans-serif',
         padding: '20px',
         textAlign: 'center'
       }}>
+        <h1 style={{ fontSize: '32px', marginBottom: '20px' }}>
+          🚀 Botboss
+        </h1>
+        
         <div style={{
-          width: '80px',
-          height: '80px',
-          border: '4px solid rgba(255,255,255,0.3)',
-          borderTopColor: 'white',
+          width: '60px',
+          height: '60px',
+          border: '3px solid rgba(255,255,255,0.2)',
+          borderTopColor: '#a78bfa',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
-          marginBottom: '30px'
+          margin: '30px 0'
         }}></div>
         
-        <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>
-          {message}
+        <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>
+          Waking up backend server...
         </h2>
         
-        <p style={{ fontSize: '16px', opacity: 0.9, marginBottom: '20px' }}>
-          Free backend takes 30-60 seconds to wake up
+        <p style={{ color: '#a78bfa', marginBottom: '5px' }}>
+          Attempt {attempt} of 10
         </p>
         
-        <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '30px' }}>
-          Attempt {retryCount + 1} • Please wait...
+        <p style={{ fontSize: '14px', opacity: 0.8, maxWidth: '400px' }}>
+          Free backend takes 30-60 seconds to wake up. Please wait.
         </p>
         
         <button
-          onClick={() => setRetryCount(retryCount + 1)}
+          onClick={() => setAttempt(attempt + 1)}
           style={{
+            marginTop: '30px',
             padding: '12px 30px',
-            background: 'white',
-            color: '#667eea',
+            background: '#a78bfa',
+            color: 'white',
             border: 'none',
             borderRadius: '8px',
             fontSize: '16px',
             fontWeight: 'bold',
-            cursor: 'pointer',
-            marginTop: '20px',
-            transition: 'transform 0.2s'
+            cursor: 'pointer'
           }}
-          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
-          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
         >
           Retry Now
         </button>
