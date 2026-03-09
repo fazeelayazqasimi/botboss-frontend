@@ -173,6 +173,15 @@ const JobDetails = () => {
     return 'Below Requirements - Not Eligible for Interview';
   };
 
+  // 🔥 Helper function to format salary display
+  const formatSalary = (salary) => {
+    if (!salary) return 'Not specified';
+    if (salary.toLowerCase().includes('unpaid')) {
+      return '💰 Unpaid Position (Volunteer/Internship)';
+    }
+    return `💰 ${salary}`;
+  };
+
   const styles = {
     container: {
       minHeight: '100vh',
@@ -593,7 +602,8 @@ const JobDetails = () => {
             
             <div style={styles.jobMeta}>
               <span style={styles.metaItem}>📍 {job.location}</span>
-              <span style={styles.metaItem}>💰 {job.salary}</span>
+              {/* 🔥 UPDATED: Salary display with Unpaid handling */}
+              <span style={styles.metaItem}>{formatSalary(job.salary)}</span>
               <span style={styles.metaItem}>⏰ {job.type}</span>
               <span style={styles.metaItem}>📅 Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
             </div>
@@ -703,11 +713,25 @@ const JobDetails = () => {
                   </tr>
                   <tr>
                     <td style={{padding: '0.5rem 0', color: '#666'}}>Salary:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.salary}</td>
+                    <td style={{padding: '0.5rem 0', color: '#333'}}>
+                      {/* 🔥 UPDATED: Salary in summary with Unpaid handling */}
+                      {job.salary === 'Unpaid (Volunteer/Internship)' 
+                        ? 'Unpaid Position' 
+                        : job.salary}
+                    </td>
                   </tr>
                   <tr>
                     <td style={{padding: '0.5rem 0', color: '#666'}}>Posted:</td>
                     <td style={{padding: '0.5rem 0', color: '#333'}}>{new Date(job.postedDate).toLocaleDateString()}</td>
+                  </tr>
+                  <tr>
+                    <td style={{padding: '0.5rem 0', color: '#666'}}>
+                      {/* 🔥 UPDATED: Changed from "Application Deadline" to "Job Deadline" */}
+                      Job Deadline:
+                    </td>
+                    <td style={{padding: '0.5rem 0', color: '#333'}}>
+                      {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'Not specified'}
+                    </td>
                   </tr>
                   <tr>
                     <td style={{padding: '0.5rem 0', color: '#666'}}>Applicants:</td>
@@ -734,8 +758,13 @@ const JobDetails = () => {
                     <h3 style={styles.relatedJobTitle}>{relatedJob.title}</h3>
                     <p style={styles.relatedJobCompany}>{relatedJob.company}</p>
                     <div style={styles.relatedJobMeta}>
-                      <span>📍 {relatedJob.location.split(' ')[0]}</span>
-                      <span>💰 {relatedJob.salary}</span>
+                      <span>📍 {relatedJob.location?.split(' ')[0] || relatedJob.location}</span>
+                      <span>
+                        {/* 🔥 UPDATED: Related jobs salary with Unpaid handling */}
+                        {relatedJob.salary === 'Unpaid (Volunteer/Internship)' 
+                          ? 'Unpaid' 
+                          : relatedJob.salary}
+                      </span>
                     </div>
                   </div>
                 </Link>
