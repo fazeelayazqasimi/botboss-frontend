@@ -64,7 +64,6 @@ const C = {
   tealLight:   '#CCFBF1',
 };
 
-// score → color mapping
 const scoreColor = (n) => {
   if (n >= 80) return C.green;
   if (n >= 60) return C.blue;
@@ -101,7 +100,6 @@ const formatDate = (d) => {
   } catch { return d; }
 };
 
-// ─── Shared style helpers ─────────────────────────────────────────────────────
 const font = "'Poppins', sans-serif";
 
 const card = {
@@ -209,8 +207,9 @@ const Report = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
-  
+  // ✅ FIXED: Correct API URL
+  const API_URL = (process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space').replace(/\/$/, '');
+
   useEffect(() => { fetchReport(); }, [sessionId]);
 
   const fetchReport = async () => {
@@ -226,7 +225,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
     } finally { setLoading(false); }
   };
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <Page>
       <div style={{ textAlign: 'center', padding: '4rem 0' }}>
@@ -239,7 +237,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
     </Page>
   );
 
-  // ── Error ───────────────────────────────────────────────────────────────────
   if (error || !report) return (
     <Page>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
@@ -269,9 +266,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
   );
 
   const overall = report.overall_score || 0;
-  const rColor  = recColor(report.recommendation);
 
-  // ── Full report ─────────────────────────────────────────────────────────────
   return (
     <Page>
       <div style={{ maxWidth: 900, margin: '0 auto', width: '100%', padding: '0 1rem' }}>
@@ -304,8 +299,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
               Refresh
             </button>
             <button onClick={() => window.print()}
-              style={{ ...btn, background: C.white, color: C.purple,
-                border: `1.5px solid ${C.purple}` }}>
+              style={{ ...btn, background: C.white, color: C.purple, border: `1.5px solid ${C.purple}` }}>
               <Icon d={ic.printer} size={14} color={C.purple} />
               Print
             </button>
@@ -333,7 +327,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
                 </span>
               </div>
             </div>
-            {/* Large ring */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <svg width={120} height={120} style={{ transform: 'rotate(-90deg)' }}>
                 <circle cx={60} cy={60} r={50} fill="none" stroke={`${C.white}20`} strokeWidth={10} />
@@ -353,9 +346,9 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
         {/* ── Score metrics ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '12px', marginBottom: '1.25rem' }}>
-          <MetricCard icon={ic.eye}     label="Eye Contact" value={report.eye_contact_score  || 0} />
-          <MetricCard icon={ic.zap}     label="Confidence"  value={report.confidence_score   || 0} />
-          <MetricCard icon={ic.target}  label="Clarity"     value={report.clarity_score      || 0} />
+          <MetricCard icon={ic.eye}    label="Eye Contact" value={report.eye_contact_score || 0} />
+          <MetricCard icon={ic.zap}    label="Confidence"  value={report.confidence_score  || 0} />
+          <MetricCard icon={ic.target} label="Clarity"     value={report.clarity_score     || 0} />
           <div style={{ ...card, padding: '1.25rem', textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.5rem' }}>
               <svg width={88} height={88} style={{ transform: 'rotate(-90deg)' }}>
@@ -397,7 +390,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
 
         {/* ── Strengths & Weaknesses ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.25rem' }}>
-          {/* Strengths */}
           <div style={card}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: `1px solid ${C.grey100}`,
               display: 'flex', alignItems: 'center', gap: '9px' }}>
@@ -423,7 +415,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
             </ul>
           </div>
 
-          {/* Areas to improve */}
           <div style={card}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: `1px solid ${C.grey100}`,
               display: 'flex', alignItems: 'center', gap: '9px' }}>
@@ -473,14 +464,11 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
               return (
                 <div key={i} style={{ border: `1px solid ${C.grey200}`, borderRadius: '12px',
                   overflow: 'hidden', marginBottom: i < report.question_analysis.length - 1 ? '12px' : 0 }}>
-                  {/* Q header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '0.875rem 1.125rem', background: C.grey50,
                     borderBottom: `1px solid ${C.grey200}`, gap: '10px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={chip(C.purpleLight, C.purple)}>
-                        Q{qa.question_number || i + 1}
-                      </span>
+                      <span style={chip(C.purpleLight, C.purple)}>Q{qa.question_number || i + 1}</span>
                       <span style={chip(isText ? C.blueLight : C.amberLight, isText ? C.blue : C.amber)}>
                         <Icon d={isText ? ic.type : ic.mic} size={11} color={isText ? C.blue : C.amber} />
                         {isText ? 'Text' : 'Voice'}
@@ -491,20 +479,13 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
                         <div style={{ height: '100%', width: `${qScore}%`, background: scoreColor(qScore),
                           borderRadius: 3, transition: 'width 0.6s ease' }} />
                       </div>
-                      <span style={{ ...chip(scoreBg(qScore), scoreColor(qScore)) }}>
-                        {qScore}%
-                      </span>
+                      <span style={chip(scoreBg(qScore), scoreColor(qScore))}>{qScore}%</span>
                     </div>
                   </div>
 
                   <div style={{ padding: '1rem 1.125rem' }}>
-                    {/* Question text */}
                     <p style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', fontWeight: 600,
-                      color: C.grey900, lineHeight: 1.6 }}>
-                      {qa.question}
-                    </p>
-
-                    {/* Answer */}
+                      color: C.grey900, lineHeight: 1.6 }}>{qa.question}</p>
                     <div style={{ background: C.grey50, border: `1px solid ${C.grey100}`,
                       borderRadius: '8px', padding: '0.875rem', marginBottom: '0.75rem' }}>
                       <div style={{ ...label, marginBottom: '6px' }}>Your Answer</div>
@@ -512,13 +493,11 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
                         {qa.answer || 'No answer recorded'}
                       </p>
                     </div>
-
-                    {/* Feedback */}
                     {qa.feedback && (
                       <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start',
                         padding: '0.75rem', background: C.purpleLight, borderRadius: '8px',
                         border: `1px solid ${C.purple}20` }}>
-                        <Icon d={ic.helpCircle} size={15} color={C.purple} style={{ flexShrink: 0 }} />
+                        <Icon d={ic.helpCircle} size={15} color={C.purple} />
                         <p style={{ ...body, fontSize: '0.83rem', margin: 0, color: C.purpleDark }}>
                           <strong>Feedback:</strong> {qa.feedback}
                         </p>
@@ -560,15 +539,11 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botbo
           nav, footer, .no-print { display: none !important; }
           body { background: white; }
         }
-        @media (max-width: 600px) {
-          .sw-grid { grid-template-columns: 1fr !important; }
-        }
       `}</style>
     </Page>
   );
 };
 
-// ─── Layout wrapper ───────────────────────────────────────────────────────────
 const Page = ({ children }) => (
   <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column',
     background: C.grey50, fontFamily: font }}>
