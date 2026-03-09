@@ -39,6 +39,9 @@ const ic = {
   inbox:      'M22 12h-6l-2 3H10l-2-3H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z',
   toggleOn:   'M23 12a11 11 0 01-11 11A11 11 0 011 12 11 11 0 0112 1a11 11 0 0111 11zM18 12a6 6 0 01-6 6 6 6 0 01-6-6 6 6 0 016-6 6 6 0 016 6z',
   starFill:   'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  // 🔥 New icons
+  download:   'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',
+  external:   'M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3',
 };
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
@@ -64,6 +67,8 @@ const C = {
   amberLight:  '#FEF3C7',
   blue:        '#2563EB',
   blueLight:   '#DBEAFE',
+  teal:        '#0D9488',
+  tealLight:   '#CCFBF1',
 };
 
 const font = "'Poppins', sans-serif";
@@ -184,6 +189,7 @@ const CompanyDashboard = () => {
       const cInts    = allInts.filter(i => cApps.some(a => a.id === i.applicationId));
       setInterviews(cInts);
 
+      // 🔥 Load all reports for completed interviews
       await loadReportsFromBackend(cInts);
 
       const activeCount = cJobs.filter(j => j.active !== false).length;
@@ -420,7 +426,7 @@ const CompanyDashboard = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Applied','CV Score','Status','Interview','Actions'].map(h => (
+                        {['Candidate','Job','Applied','CV Score','Status','Interview','Report','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -467,12 +473,19 @@ const CompanyDashboard = () => {
                                 : <span style={{ color: C.grey400 }}>—</span>}
                             </td>
                             <td style={td}>
+                              {report ? (
+                                <span style={chip(scoreBg(report.overall_score), scoreColor(report.overall_score))}>
+                                  {report.overall_score}%
+                                </span>
+                              ) : <span style={{ color: C.grey400 }}>—</span>}
+                            </td>
+                            <td style={td}>
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                 {report && (
                                   <Link to={`/report/${interview.id}`}
                                     style={{ ...btn, height: 32, background: C.purpleLight, color: C.purple, border: 'none' }}>
                                     <Icon d={ic.fileText} size={12} color={C.purple} />
-                                    Report
+                                    View Report
                                   </Link>
                                 )}
                                 <button onClick={() => setActiveTab('applications')}
@@ -575,10 +588,10 @@ const CompanyDashboard = () => {
               </SectionHead>
               {filteredApplications.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Applied','CV Score','Status','Interview','Score','Actions'].map(h => (
+                        {['Candidate','Job','Applied','CV Score','Status','Interview','Report Score','Report','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -648,6 +661,15 @@ const CompanyDashboard = () => {
                               ) : <span style={{ color: C.grey400 }}>—</span>}
                             </td>
                             <td style={td}>
+                              {report && (
+                                <Link to={`/report/${interview.id}`}
+                                  style={{ ...btn, height: 32, background: C.purpleLight, color: C.purple, border: 'none' }}>
+                                  <Icon d={ic.fileText} size={12} color={C.purple} />
+                                  View Report
+                                </Link>
+                              )}
+                            </td>
+                            <td style={td}>
                               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                                 {app.status === 'Shortlisted' && (
                                   <button onClick={() => scheduleInterview(app.id)}
@@ -662,13 +684,6 @@ const CompanyDashboard = () => {
                                     <Icon d={ic.check} size={12} color={C.green} />
                                     Complete
                                   </button>
-                                )}
-                                {report && (
-                                  <Link to={`/report/${interview.id}`}
-                                    style={{ ...btn, height: 32, background: C.purpleLight, color: C.purple, border: 'none' }}>
-                                    <Icon d={ic.fileText} size={12} color={C.purple} />
-                                    Report
-                                  </Link>
                                 )}
                               </div>
                             </td>
@@ -690,10 +705,10 @@ const CompanyDashboard = () => {
               <SectionHead title="All Interviews" />
               {interviews.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Scheduled','Status','Score','Report','Actions'].map(h => (
+                        {['Candidate','Job','Scheduled','Status','Report Score','Report','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -729,8 +744,9 @@ const CompanyDashboard = () => {
                             <td style={td}>
                               {report
                                 ? <Link to={`/report/${interview.id}`}
-                                    style={{ color: C.purple, fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none' }}>
-                                    View
+                                    style={{ ...btn, height: 32, background: C.purpleLight, color: C.purple, border: 'none' }}>
+                                    <Icon d={ic.fileText} size={12} color={C.purple} />
+                                    View Report
                                   </Link>
                                 : <span style={{ color: C.grey400 }}>—</span>}
                             </td>
@@ -761,10 +777,10 @@ const CompanyDashboard = () => {
               <SectionHead title="Interview Reports" />
               {reports.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 950 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Date','Overall','Eye Contact','Confidence','Clarity',''].map(h => (
+                        {['Candidate','Job','Date','Overall','Eye Contact','Confidence','Clarity','Report','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -791,8 +807,15 @@ const CompanyDashboard = () => {
                             <td style={td}>
                               <Link to={`/report/${interviewId}`}
                                 style={{ ...btn, height: 32, background: C.purpleLight, color: C.purple, border: 'none' }}>
-                                <Icon d={ic.eye} size={12} color={C.purple} />
-                                Full Report
+                                <Icon d={ic.fileText} size={12} color={C.purple} />
+                                View Report
+                              </Link>
+                            </td>
+                            <td style={td}>
+                              <Link to={`/report/${interviewId}`}
+                                style={{ ...btn, height: 32, background: C.purple, color: C.white, border: 'none' }}>
+                                <Icon d={ic.eye} size={12} color={C.white} />
+                                Full Details
                               </Link>
                             </td>
                           </tr>
