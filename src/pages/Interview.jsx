@@ -354,7 +354,7 @@ const Interview = () => {
   const timerRef = useRef(null);
   const eyeCheckRef = useRef(null);
 
-  const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space/';
+  const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
