@@ -24,7 +24,10 @@ const JobDetails = () => {
     coverLetter: ''
   });
   const [forceReupload, setForceReupload] = useState(false);
-  const [uploadError, setUploadError] = useState(''); // New state for upload error
+  const [uploadError, setUploadError] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('success'); // success, error, warning
 
   useEffect(() => {
     // Check logged in user
@@ -85,6 +88,22 @@ const JobDetails = () => {
     }
   }, [user, job, showApplyModal]);
 
+  // Auto-hide alert after 3 seconds
+  useEffect(() => {
+    if (showAlert) {
+      const timer = setTimeout(() => {
+        setShowAlert(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showAlert]);
+
+  const showCustomAlert = (message, type = 'success') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setShowAlert(true);
+  };
+
   // Validate file type and size
   const validateFile = (file) => {
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -131,7 +150,7 @@ const JobDetails = () => {
       
     } catch (error) {
       console.error('Error analyzing CV:', error);
-      alert('Error analyzing CV. Please try again.');
+      showCustomAlert('Error analyzing CV. Please try again.', 'error');
       setCvScore(0);
       setCvAnalyzing(false);
     }
@@ -143,7 +162,7 @@ const JobDetails = () => {
       return;
     }
     if (user.type !== 'candidate') {
-      alert('Only candidates can apply for jobs');
+      showCustomAlert('Only candidates can apply for jobs', 'warning');
       return;
     }
     
@@ -185,12 +204,12 @@ const JobDetails = () => {
     e.preventDefault();
     
     if (!cvFile) {
-      alert('Please upload your CV');
+      showCustomAlert('Please upload your CV', 'warning');
       return;
     }
     
     if (cvScore === null) {
-      alert('Please wait for CV analysis to complete');
+      showCustomAlert('Please wait for CV analysis to complete', 'warning');
       return;
     }
     
@@ -201,7 +220,7 @@ const JobDetails = () => {
     );
     
     if (existingApplicationIndex !== -1 && !forceReupload) {
-      alert('You have already applied for this job!');
+      showCustomAlert('You have already applied for this job!', 'warning');
       setShowApplyModal(false);
       setHasApplied(true);
       return;
@@ -229,7 +248,11 @@ const JobDetails = () => {
       allApplications[existingApplicationIndex] = newApplication;
       localStorage.setItem('applications', JSON.stringify(allApplications));
       
-      alert(`✅ Application updated! Your new CV matches ${cvScore}% of the requirements.`);
+      if (cvScore >= 50) {
+        showCustomAlert(`✅ Application Updated! Your CV matches ${cvScore}% of the requirements. You are eligible for the interview.`, 'success');
+      } else {
+        showCustomAlert(`⚠️ Application Updated. Your CV matches ${cvScore}% of the requirements. You need 50% to be eligible for the interview.`, 'warning');
+      }
     } else {
       // Create new application
       newApplication = applications.saveApplication({
@@ -257,7 +280,11 @@ const JobDetails = () => {
         candidates.saveCandidate(updatedCandidate);
       }
       
-      alert(`✅ Application submitted! Your CV matches ${cvScore}% of the requirements.`);
+      if (cvScore >= 50) {
+        showCustomAlert(`🎉 Application Submitted Successfully! Your CV matches ${cvScore}% of the requirements. You are eligible for the interview.`, 'success');
+      } else {
+        showCustomAlert(`📝 Application Submitted. Your CV matches ${cvScore}% of the requirements. You need 50% to be eligible for the interview.`, 'warning');
+      }
     }
 
     setShowApplyModal(false);
@@ -669,6 +696,57 @@ const JobDetails = () => {
       padding: '0.5rem',
       background: '#ffebee',
       borderRadius: '4px'
+    },
+    alertOverlay: {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      zIndex: 9999,
+      animation: 'slideIn 0.3s ease'
+    },
+    alert: {
+      padding: '1rem 1.5rem',
+      borderRadius: '12px',
+      backgroundColor: 'white',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      minWidth: '300px',
+      maxWidth: '450px',
+      borderLeft: '4px solid'
+    },
+    alertSuccess: {
+      borderLeftColor: '#4caf50'
+    },
+    alertError: {
+      borderLeftColor: '#f44336'
+    },
+    alertWarning: {
+      borderLeftColor: '#ff9800'
+    },
+    alertIcon: {
+      fontSize: '24px'
+    },
+    alertContent: {
+      flex: 1
+    },
+    alertTitle: {
+      fontSize: '0.85rem',
+      fontWeight: 'bold',
+      marginBottom: '0.25rem'
+    },
+    alertMessage: {
+      fontSize: '0.85rem',
+      color: '#666',
+      lineHeight: 1.4
+    },
+    alertClose: {
+      cursor: 'pointer',
+      color: '#999',
+      fontSize: '18px',
+      lineHeight: 1,
+      padding: '0 4px'
     }
   };
 
@@ -697,6 +775,38 @@ const JobDetails = () => {
 
   return (
     <div style={styles.container}>
+      {/* Custom Alert Popup */}
+      {showAlert && (
+        <div style={styles.alertOverlay}>
+          <div style={{
+            ...styles.alert,
+            ...(alertType === 'success' ? styles.alertSuccess : 
+               alertType === 'error' ? styles.alertError : 
+               styles.alertWarning)
+          }}>
+            <div style={styles.alertIcon}>
+              {alertType === 'success' && '✅'}
+              {alertType === 'error' && '❌'}
+              {alertType === 'warning' && '⚠️'}
+            </div>
+            <div style={styles.alertContent}>
+              <div style={{
+                ...styles.alertTitle,
+                color: alertType === 'success' ? '#4caf50' : 
+                       alertType === 'error' ? '#f44336' : 
+                       '#ff9800'
+              }}>
+                {alertType === 'success' ? 'Success!' : 
+                 alertType === 'error' ? 'Error!' : 
+                 'Notice'}
+              </div>
+              <div style={styles.alertMessage}>{alertMessage}</div>
+            </div>
+            <div style={styles.alertClose} onClick={() => setShowAlert(false)}>×</div>
+          </div>
+        </div>
+      )}
+
       <Navbar />
       
       <main style={styles.main}>
@@ -942,12 +1052,11 @@ const JobDetails = () => {
                 
                 {cvScore !== null && !cvAnalyzing && !uploadError && (
                   <div style={styles.cvScoreDisplay}>
-                    
                     <div style={{
                       ...styles.scoreMessage,
                       color: getScoreColor(cvScore)
                     }}>
-                      {getScoreMessage(cvScore)}
+                      {getScoreMessage(cvScore)} - {cvScore}%
                     </div>
                     <div style={styles.scoreDetail}>
                       {cvScore >= 50 
