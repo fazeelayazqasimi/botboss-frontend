@@ -9,21 +9,31 @@ const Jobs = () => {
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ search: '', location: '', type: '', category: '', salary: '' });
-  const [sortBy, setSortBy] = useState('relevant');
+  const [sortBy, setSortBy] = useState('newest'); // Changed default to 'newest'
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  useEffect(() => { loadJobs(); }, []);
-  useEffect(() => { applyFiltersAndSort(); }, [filters, jobs, sortBy]);
+  useEffect(() => { 
+    loadJobs(); 
+  }, []);
+  
+  useEffect(() => { 
+    console.log('Filters or sort changed:', filters, sortBy);
+    applyFiltersAndSort(); 
+  }, [filters, jobs, sortBy]);
 
   const loadJobs = () => {
     const companiesData = JSON.parse(localStorage.getItem('companies') || '[]');
     const allJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+    console.log('All jobs loaded:', allJobs);
+    
     const realJobs = allJobs.filter(job => {
       const belongsToCompany = companiesData.some(c => c.id === job.companyId || c.name === job.company || c.email === job.companyEmail);
       const hasValidCompanyId = job.companyId && job.companyId > 0;
       return belongsToCompany || hasValidCompanyId;
     });
+    
+    console.log('Real jobs after filter:', realJobs);
     setJobs(realJobs);
     setFilteredJobs(realJobs);
     setLocations([...new Set(realJobs.map(j => j.location?.split(' ')[0] || ''))].filter(Boolean));
@@ -32,6 +42,8 @@ const Jobs = () => {
   };
 
   const applyFiltersAndSort = () => {
+    if (!jobs.length) return;
+    
     let f = [...jobs];
     
     // Apply filters
@@ -63,6 +75,7 @@ const Jobs = () => {
     // Apply sorting
     f = sortJobs(f, sortBy);
     
+    console.log('Sorted jobs:', f);
     setFilteredJobs(f);
   };
 
@@ -71,34 +84,68 @@ const Jobs = () => {
     
     switch(sortType) {
       case 'newest':
-        return sorted.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+        console.log('Sorting by newest...');
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.postedDate);
+          const dateB = new Date(b.postedDate);
+          return dateB - dateA;
+        });
       
       case 'oldest':
-        return sorted.sort((a, b) => new Date(a.postedDate) - new Date(b.postedDate));
+        console.log('Sorting by oldest...');
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.postedDate);
+          const dateB = new Date(b.postedDate);
+          return dateA - dateB;
+        });
       
       case 'salary-high':
+        console.log('Sorting by salary high to low...');
         return sorted.sort((a, b) => {
-          const salaryA = parseInt(a.salary?.replace(/[^0-9]/g, '')) || 0;
-          const salaryB = parseInt(b.salary?.replace(/[^0-9]/g, '')) || 0;
+          const salaryA = getSalaryNumber(a.salary);
+          const salaryB = getSalaryNumber(b.salary);
           return salaryB - salaryA;
         });
       
       case 'salary-low':
+        console.log('Sorting by salary low to high...');
         return sorted.sort((a, b) => {
-          const salaryA = parseInt(a.salary?.replace(/[^0-9]/g, '')) || 0;
-          const salaryB = parseInt(b.salary?.replace(/[^0-9]/g, '')) || 0;
+          const salaryA = getSalaryNumber(a.salary);
+          const salaryB = getSalaryNumber(b.salary);
           return salaryA - salaryB;
         });
       
       case 'relevant':
       default:
-        // Keep original order or sort by relevance (default: newest first for relevance)
-        return sorted.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+        console.log('Sorting by relevance (newest first)...');
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.postedDate);
+          const dateB = new Date(b.postedDate);
+          return dateB - dateA;
+        });
     }
   };
 
+  // Helper function to extract salary number
+  const getSalaryNumber = (salaryString) => {
+    if (!salaryString) return 0;
+    // Extract numbers from string like "₹10 LPA", "10-15 LPA", etc.
+    const numbers = salaryString.match(/\d+/g);
+    if (!numbers) return 0;
+    // If there are multiple numbers (like range), take the first one or average
+    if (numbers.length === 1) return parseInt(numbers[0]);
+    if (numbers.length >= 2) {
+      // For ranges like "10-15", return the average or middle
+      return (parseInt(numbers[0]) + parseInt(numbers[1])) / 2;
+    }
+    return parseInt(numbers[0]) || 0;
+  };
+
   const handleFilterChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
-  const handleSortChange = e => setSortBy(e.target.value);
+  const handleSortChange = e => {
+    console.log('Sort changed to:', e.target.value);
+    setSortBy(e.target.value);
+  };
   const clearFilters = () => setFilters({ search: '', location: '', type: '', category: '', salary: '' });
   const refreshJobs = () => { setLoading(true); loadJobs(); };
 
@@ -231,7 +278,8 @@ const Jobs = () => {
         .jobs-results-bar {
           background: white; border: 1.5px solid #f3f4f6;
           border-radius: 14px; padding: 1rem 1.25rem;
-          display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+          display: flex; justify-content: space-between; align-items: center;
+          gap: 1rem;
           flex-wrap: wrap;
         }
         .jobs-count { font-size: 0.85rem; color: #6b7280; font-weight: 500; }
@@ -392,11 +440,11 @@ const Jobs = () => {
                 Showing <strong>{filteredJobs.length}</strong> {filteredJobs.length === 1 ? 'job' : 'jobs'}
               </span>
               <select className="jobs-sort" value={sortBy} onChange={handleSortChange}>
-                <option value="relevant">Most Relevant</option>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="salary-high">Salary: High to Low</option>
                 <option value="salary-low">Salary: Low to High</option>
+                <option value="relevant">Most Relevant</option>
               </select>
             </div>
 
