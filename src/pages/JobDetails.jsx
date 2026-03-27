@@ -942,12 +942,7 @@ const JobDetails = () => {
                 
                 {cvScore !== null && !cvAnalyzing && !uploadError && (
                   <div style={styles.cvScoreDisplay}>
-                    <div style={{
-                      ...styles.scoreCircle,
-                      background: getScoreColor(cvScore)
-                    }}>
-                      {cvScore}%
-                    </div>
+                    
                     <div style={{
                       ...styles.scoreMessage,
                       color: getScoreColor(cvScore)
