@@ -9,11 +9,12 @@ const Jobs = () => {
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ search: '', location: '', type: '', category: '', salary: '' });
+  const [sortBy, setSortBy] = useState('relevant');
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
 
   useEffect(() => { loadJobs(); }, []);
-  useEffect(() => { applyFilters(); }, [filters, jobs]);
+  useEffect(() => { applyFiltersAndSort(); }, [filters, jobs, sortBy]);
 
   const loadJobs = () => {
     const companiesData = JSON.parse(localStorage.getItem('companies') || '[]');
@@ -30,28 +31,74 @@ const Jobs = () => {
     setLoading(false);
   };
 
-  const applyFilters = () => {
+  const applyFiltersAndSort = () => {
     let f = [...jobs];
-    if (filters.search) f = f.filter(j => j.title?.toLowerCase().includes(filters.search.toLowerCase()) || j.company?.toLowerCase().includes(filters.search.toLowerCase()) || j.description?.toLowerCase().includes(filters.search.toLowerCase()));
+    
+    // Apply filters
+    if (filters.search) {
+      f = f.filter(j => 
+        j.title?.toLowerCase().includes(filters.search.toLowerCase()) || 
+        j.company?.toLowerCase().includes(filters.search.toLowerCase()) || 
+        j.description?.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
     if (filters.location) f = f.filter(j => j.location?.includes(filters.location));
     if (filters.type) f = f.filter(j => j.type === filters.type);
     if (filters.category) f = f.filter(j => j.category === filters.category);
-    if (filters.salary) f = f.filter(j => {
-      if (!j.salary) return false;
-      const n = parseInt(j.salary.replace(/[^0-9]/g, ''));
-      if (isNaN(n)) return false;
-      switch (filters.salary) {
-        case '0-10': return n < 10;
-        case '10-20': return n >= 10 && n < 20;
-        case '20-30': return n >= 20 && n < 30;
-        case '30+': return n >= 30;
-        default: return true;
-      }
-    });
+    if (filters.salary) {
+      f = f.filter(j => {
+        if (!j.salary) return false;
+        const n = parseInt(j.salary.replace(/[^0-9]/g, ''));
+        if (isNaN(n)) return false;
+        switch (filters.salary) {
+          case '0-10': return n < 10;
+          case '10-20': return n >= 10 && n < 20;
+          case '20-30': return n >= 20 && n < 30;
+          case '30+': return n >= 30;
+          default: return true;
+        }
+      });
+    }
+    
+    // Apply sorting
+    f = sortJobs(f, sortBy);
+    
     setFilteredJobs(f);
   };
 
+  const sortJobs = (jobsArray, sortType) => {
+    const sorted = [...jobsArray];
+    
+    switch(sortType) {
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+      
+      case 'oldest':
+        return sorted.sort((a, b) => new Date(a.postedDate) - new Date(b.postedDate));
+      
+      case 'salary-high':
+        return sorted.sort((a, b) => {
+          const salaryA = parseInt(a.salary?.replace(/[^0-9]/g, '')) || 0;
+          const salaryB = parseInt(b.salary?.replace(/[^0-9]/g, '')) || 0;
+          return salaryB - salaryA;
+        });
+      
+      case 'salary-low':
+        return sorted.sort((a, b) => {
+          const salaryA = parseInt(a.salary?.replace(/[^0-9]/g, '')) || 0;
+          const salaryB = parseInt(b.salary?.replace(/[^0-9]/g, '')) || 0;
+          return salaryA - salaryB;
+        });
+      
+      case 'relevant':
+      default:
+        // Keep original order or sort by relevance (default: newest first for relevance)
+        return sorted.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+    }
+  };
+
   const handleFilterChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
+  const handleSortChange = e => setSortBy(e.target.value);
   const clearFilters = () => setFilters({ search: '', location: '', type: '', category: '', salary: '' });
   const refreshJobs = () => { setLoading(true); loadJobs(); };
 
@@ -185,6 +232,7 @@ const Jobs = () => {
           background: white; border: 1.5px solid #f3f4f6;
           border-radius: 14px; padding: 1rem 1.25rem;
           display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+          flex-wrap: wrap;
         }
         .jobs-count { font-size: 0.85rem; color: #6b7280; font-weight: 500; }
         .jobs-count strong { color: #7c3aed; font-weight: 700; }
@@ -193,6 +241,14 @@ const Jobs = () => {
           border: 1.5px solid #f3f4f6; border-radius: 10px;
           font-family: 'Poppins', sans-serif; font-size: 0.82rem;
           color: #4b5563; background: white; outline: none; cursor: pointer;
+          transition: all 0.2s;
+        }
+        .jobs-sort:hover {
+          border-color: #7c3aed;
+        }
+        .jobs-sort:focus {
+          border-color: #7c3aed;
+          box-shadow: 0 0 0 2px rgba(124,58,237,0.1);
         }
         .jobs-grid {
           display: grid;
@@ -240,6 +296,7 @@ const Jobs = () => {
         }
         @media (max-width: 600px) {
           .jobs-grid { grid-template-columns: 1fr; }
+          .jobs-results-bar { flex-direction: column; align-items: flex-start; }
         }
       `}</style>
 
@@ -334,11 +391,12 @@ const Jobs = () => {
               <span className="jobs-count">
                 Showing <strong>{filteredJobs.length}</strong> {filteredJobs.length === 1 ? 'job' : 'jobs'}
               </span>
-              <select className="jobs-sort">
-                <option>Most Relevant</option>
-                <option>Newest First</option>
-                <option>Salary: High to Low</option>
-                <option>Salary: Low to High</option>
+              <select className="jobs-sort" value={sortBy} onChange={handleSortChange}>
+                <option value="relevant">Most Relevant</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="salary-high">Salary: High to Low</option>
+                <option value="salary-low">Salary: Low to High</option>
               </select>
             </div>
 
