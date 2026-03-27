@@ -7,22 +7,40 @@ import { findUserByCredentials } from '../data/storage';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState('candidate');
+  const [userType, setUserType] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
+
+  const handleTypeSelect = (type) => {
+    setUserType(type);
+    setShowForm(true);
+    setError('');
+  };
+
+  const handleBackToType = () => {
+    setUserType(null);
+    setShowForm(false);
+    setEmail('');
+    setPassword('');
+    setError('');
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     if (!email || !password) {
       setError('Please enter both email and password');
       setLoading(false);
       return;
     }
+    
     const user = findUserByCredentials(email, password, userType);
+    
     if (user) {
       const { password: _, ...userWithoutPassword } = user;
       localStorage.setItem('user', JSON.stringify(userWithoutPassword));
@@ -66,6 +84,8 @@ const Login = () => {
           width: 100%;
           max-width: 460px;
           padding: 2.5rem;
+          overflow: hidden;
+          position: relative;
         }
 
         /* ── HEADER ── */
@@ -88,35 +108,143 @@ const Login = () => {
           text-align: center; margin-bottom: 2rem;
         }
 
-        /* ── USER TYPE TOGGLE ── */
-        .auth-toggle {
+        /* ── TYPE SELECTION ── */
+        .type-selection {
           display: flex;
-          background: #f9fafb;
-          border: 1.5px solid #f3f4f6;
-          border-radius: 12px;
-          padding: 4px;
-          margin-bottom: 1.75rem;
-          gap: 4px;
+          flex-direction: column;
+          gap: 1rem;
+          margin-bottom: 0;
         }
-        .auth-toggle-btn {
-          flex: 1;
-          display: flex; align-items: center; justify-content: center;
-          gap: 0.5rem;
-          padding: 0.6rem 1rem;
-          border-radius: 9px;
-          border: none;
-          font-family: 'Poppins', sans-serif;
-          font-size: 0.84rem; font-weight: 600;
+
+        .type-card {
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+          padding: 1.25rem;
+          border: 2px solid #e5e7eb;
+          border-radius: 16px;
           cursor: pointer;
-          transition: all 0.2s;
-          color: #6b7280;
-          background: transparent;
-        }
-        .auth-toggle-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; flex-shrink: 0; }
-        .auth-toggle-btn.active {
+          transition: all 0.3s ease;
           background: white;
+        }
+
+        .type-card:hover {
+          border-color: #7c3aed;
+          background: #faf5ff;
+          transform: translateX(5px);
+        }
+
+        .type-icon {
+          width: 48px;
+          height: 48px;
+          background: #f3f4f6;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+        }
+
+        .type-card:hover .type-icon {
+          background: #7c3aed;
+        }
+
+        .type-icon svg {
+          width: 24px;
+          height: 24px;
+          stroke: #6b7280;
+          transition: all 0.3s ease;
+        }
+
+        .type-card:hover .type-icon svg {
+          stroke: white;
+        }
+
+        .type-info {
+          flex: 1;
+        }
+
+        .type-info h3 {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #1c0b4b;
+          margin-bottom: 0.25rem;
+        }
+
+        .type-info p {
+          font-size: 0.8rem;
+          color: #9ca3af;
+          margin: 0;
+        }
+
+        .type-arrow {
+          color: #d1d5db;
+          transition: all 0.3s ease;
+        }
+
+        .type-card:hover .type-arrow {
           color: #7c3aed;
-          box-shadow: 0 2px 8px rgba(28,11,75,0.08);
+          transform: translateX(5px);
+        }
+
+        /* ── FORM CONTAINER WITH SLIDE ANIMATION ── */
+        .form-container {
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+        }
+
+        .form-container.slide-enter {
+          max-height: 0;
+          opacity: 0;
+          transform: translateX(30px);
+        }
+
+        .form-container.slide-enter-active {
+          max-height: 500px;
+          opacity: 1;
+          transform: translateX(0);
+          transition: all 0.4s ease;
+        }
+
+        .form-container.slide-exit {
+          max-height: 500px;
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .form-container.slide-exit-active {
+          max-height: 0;
+          opacity: 0;
+          transform: translateX(-30px);
+          transition: all 0.4s ease;
+        }
+
+        /* Back button */
+        .back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: none;
+          border: none;
+          color: #7c3aed;
+          font-size: 0.85rem;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 0;
+          margin-bottom: 1.5rem;
+          font-family: 'Poppins', sans-serif;
+          transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+          gap: 0.75rem;
+          color: #6d28d9;
+        }
+
+        .back-btn svg {
+          width: 16px;
+          height: 16px;
+          stroke: currentColor;
         }
 
         /* ── FORM ── */
@@ -215,6 +343,22 @@ const Login = () => {
         }
         .auth-divider-line { flex: 1; height: 1px; background: #f3f4f6; }
         .auth-divider-text { font-size: 0.75rem; color: #d1d5db; font-weight: 500; }
+
+        /* Animation */
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .slide-in {
+          animation: slideIn 0.4s ease forwards;
+        }
       `}</style>
 
       <div className="auth-root">
@@ -233,120 +377,148 @@ const Login = () => {
             </div>
 
             <h1 className="auth-title">Welcome back</h1>
-            <p className="auth-subtitle">Login to your account to continue</p>
+            <p className="auth-subtitle">
+              {!userType ? 'Choose your account type' : `Login as ${userType === 'candidate' ? 'Candidate' : 'Company'}`}
+            </p>
 
-            {/* User Type Toggle */}
-            <div className="auth-toggle">
-              <button
-                type="button"
-                className={`auth-toggle-btn ${userType === 'candidate' ? 'active' : ''}`}
-                onClick={() => setUserType('candidate')}
-              >
-                <svg viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                Login as a Candidate
-              </button>
-              <button
-                type="button"
-                className={`auth-toggle-btn ${userType === 'company' ? 'active' : ''}`}
-                onClick={() => setUserType('company')}
-              >
-                <svg viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-                Login as a Company
-              </button>
-            </div>
+            {/* Type Selection - Only show when no type selected */}
+            {!userType && (
+              <div className="type-selection slide-in">
+                <div className="type-card" onClick={() => handleTypeSelect('candidate')}>
+                  <div className="type-icon">
+                    <svg viewBox="0 0 24 24" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div className="type-info">
+                    <h3>Candidate</h3>
+                    <p>Looking for job opportunities</p>
+                  </div>
+                  <div className="type-arrow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </div>
+                </div>
 
-            {/* Form */}
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <div className="auth-field">
-                <label className="auth-label">Email</label>
-                <div className="auth-input-wrap">
-                  <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  <input
-                    type="email"
-                    className="auth-input"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                  />
+                <div className="type-card" onClick={() => handleTypeSelect('company')}>
+                  <div className="type-icon">
+                    <svg viewBox="0 0 24 24" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                      <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                  </div>
+                  <div className="type-info">
+                    <h3>Company</h3>
+                    <p>Post jobs and find talent</p>
+                  </div>
+                  <div className="type-arrow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="auth-field">
-                <label className="auth-label">Password</label>
-                <div className="auth-input-wrap">
-                  <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+            {/* Form - Shows after type selection with slide animation */}
+            {userType && (
+              <div className="form-container slide-in">
+                <button className="back-btn" onClick={handleBackToType}>
+                  <svg viewBox="0 0 24 24" strokeWidth="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
                   </svg>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    className="auth-input has-toggle"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                  />
-                  <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? (
-                      <svg viewBox="0 0 24 24" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
+                  Back to type selection
+                </button>
+
+                <form className="auth-form" onSubmit={handleSubmit}>
+                  <div className="auth-field">
+                    <label className="auth-label">Email</label>
+                    <div className="auth-input-wrap">
+                      <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
                       </svg>
+                      <input
+                        type="email"
+                        className="auth-input"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="auth-field">
+                    <label className="auth-label">Password</label>
+                    <div className="auth-input-wrap">
+                      <svg className="auth-input-icon" viewBox="0 0 24 24" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      </svg>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        className="auth-input has-toggle"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required
+                      />
+                      <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(!showPassword)}>
+                        {showPassword ? (
+                          <svg viewBox="0 0 24 24" strokeWidth="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="auth-error">
+                      <svg viewBox="0 0 24 24" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      {error}
+                    </div>
+                  )}
+
+                  <button type="submit" className="auth-submit" disabled={loading}>
+                    {loading ? (
+                      <><div className="auth-spin" /> Logging in...</>
                     ) : (
-                      <svg viewBox="0 0 24 24" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
+                      <>
+                        Login as {userType === 'candidate' ? 'Candidate' : 'Company'}
+                        <svg viewBox="0 0 24 24" strokeWidth="2.5">
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                          <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                      </>
                     )}
                   </button>
+                </form>
+
+                <div className="auth-divider">
+                  <div className="auth-divider-line" />
+                  <span className="auth-divider-text">or</span>
+                  <div className="auth-divider-line" />
+                </div>
+
+                <div className="auth-footer">
+                  Don't have an account? <Link to="/signup">Sign up</Link>
                 </div>
               </div>
-
-              {error && (
-                <div className="auth-error">
-                  <svg viewBox="0 0 24 24" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  {error}
-                </div>
-              )}
-
-              <button type="submit" className="auth-submit" disabled={loading}>
-                {loading ? (
-                  <><div className="auth-spin" /> Logging in...</>
-                ) : (
-                  <>
-                    Login
-                    <svg viewBox="0 0 24 24" strokeWidth="2.5">
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                      <polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="auth-divider">
-              <div className="auth-divider-line" />
-              <span className="auth-divider-text">or</span>
-              <div className="auth-divider-line" />
-            </div>
-
-            <div className="auth-footer">
-              Don't have an account? <Link to="/signup">Sign up</Link>
-            </div>
+            )}
           </div>
         </main>
 
