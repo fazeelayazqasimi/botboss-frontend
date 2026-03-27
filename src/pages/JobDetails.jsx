@@ -23,7 +23,8 @@ const JobDetails = () => {
   const [applicationData, setApplicationData] = useState({
     coverLetter: ''
   });
-  const [forceReupload, setForceReupload] = useState(false); // New state for force reupload
+  const [forceReupload, setForceReupload] = useState(false);
+  const [uploadError, setUploadError] = useState(''); // New state for upload error
 
   useEffect(() => {
     // Check logged in user
@@ -84,6 +85,58 @@ const JobDetails = () => {
     }
   }, [user, job, showApplyModal]);
 
+  // Validate file type and size
+  const validateFile = (file) => {
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Only PDF and Word documents (.pdf, .doc, .docx) are allowed');
+      return false;
+    }
+    
+    if (file.size > maxSize) {
+      setUploadError('File size must be less than 10MB');
+      return false;
+    }
+    
+    setUploadError('');
+    return true;
+  };
+
+  const handleCVUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file
+    if (!validateFile(file)) {
+      setCvFile(null);
+      setCvFileName('');
+      return;
+    }
+    
+    setCvFile(file);
+    setCvFileName(file.name);
+    setCvAnalyzing(true);
+    setCvScore(null); // Reset score while analyzing
+    
+    try {
+      // Simulate CV parsing and analysis
+      setTimeout(() => {
+        // Calculate a random score between 30-90 for demo
+        const randomScore = Math.floor(Math.random() * 60) + 30;
+        setCvScore(randomScore);
+        setCvAnalyzing(false);
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error analyzing CV:', error);
+      alert('Error analyzing CV. Please try again.');
+      setCvScore(0);
+      setCvAnalyzing(false);
+    }
+  };
+
   const handleApply = () => {
     if (!user) {
       navigate('/login');
@@ -113,6 +166,7 @@ const JobDetails = () => {
         setCvScore(null);
         setCvFile(null);
         setCvFileName('');
+        setUploadError('');
         setApplicationData({ coverLetter: '' });
       }
       return;
@@ -123,32 +177,8 @@ const JobDetails = () => {
     setCvScore(null);
     setCvFile(null);
     setCvFileName('');
+    setUploadError('');
     setApplicationData({ coverLetter: '' });
-  };
-
-  const handleCVUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    setCvFile(file);
-    setCvFileName(file.name);
-    setCvAnalyzing(true);
-    
-    try {
-      // Simulate CV parsing and analysis
-      setTimeout(() => {
-        // Calculate a random score between 30-90 for demo
-        const randomScore = Math.floor(Math.random() * 60) + 30;
-        setCvScore(randomScore);
-        setCvAnalyzing(false);
-      }, 1500);
-      
-    } catch (error) {
-      console.error('Error analyzing CV:', error);
-      alert('Error analyzing CV. Please try again.');
-      setCvScore(0);
-      setCvAnalyzing(false);
-    }
   };
 
   const handleApplicationSubmit = (e) => {
@@ -631,6 +661,14 @@ const JobDetails = () => {
       fontSize: '0.9rem',
       color: '#ed6c02',
       borderLeft: '3px solid #ed6c02'
+    },
+    uploadError: {
+      color: '#f44336',
+      fontSize: '0.85rem',
+      marginTop: '0.5rem',
+      padding: '0.5rem',
+      background: '#ffebee',
+      borderRadius: '4px'
     }
   };
 
@@ -879,15 +917,21 @@ const JobDetails = () => {
                 <label style={styles.cvLabel}>
                   {forceReupload ? 'Upload Updated CV *' : 'Upload CV *'}
                 </label>
+                <label style={{...styles.cvLabel, fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem'}}>
+                  (PDF, DOC, DOCX only, Max 10MB)
+                </label>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.txt"
+                  accept=".pdf,.doc,.docx"
                   onChange={handleCVUpload}
                   style={styles.cvInput}
                   required
                 />
-                {cvFileName && (
+                {cvFileName && !uploadError && (
                   <div style={styles.cvFileName}>📄 {cvFileName}</div>
+                )}
+                {uploadError && (
+                  <div style={styles.uploadError}>⚠️ {uploadError}</div>
                 )}
                 
                 {cvAnalyzing && (
@@ -896,7 +940,7 @@ const JobDetails = () => {
                   </div>
                 )}
                 
-                {cvScore !== null && !cvAnalyzing && (
+                {cvScore !== null && !cvAnalyzing && !uploadError && (
                   <div style={styles.cvScoreDisplay}>
                     <div style={{
                       ...styles.scoreCircle,
@@ -933,7 +977,7 @@ const JobDetails = () => {
                 <button 
                   type="submit" 
                   style={styles.submitBtn}
-                  disabled={!cvFile || cvAnalyzing}
+                  disabled={!cvFile || cvAnalyzing || uploadError}
                 >
                   {forceReupload ? 'Update Application' : 'Submit Application'}
                 </button>
