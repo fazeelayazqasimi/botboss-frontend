@@ -249,9 +249,9 @@ const JobDetails = () => {
       localStorage.setItem('applications', JSON.stringify(allApplications));
       
       if (cvScore >= 50) {
-        showCustomAlert(`✅ Application Updated! Your CV matches ${cvScore}% of the requirements. You are eligible for the interview.`, 'success');
+        showCustomAlert(`✅ Application Updated! Your CV matches of the requirements. You are eligible for the interview.`, 'success');
       } else {
-        showCustomAlert(`⚠️ Application Updated. Your CV matches ${cvScore}% of the requirements. You need 50% to be eligible for the interview.`, 'warning');
+        showCustomAlert(`⚠️ Application Updated. Your CV matches of the requirements. You need 50% to be eligible for the interview.`, 'warning');
       }
     } else {
       // Create new application
@@ -281,9 +281,9 @@ const JobDetails = () => {
       }
       
       if (cvScore >= 50) {
-        showCustomAlert(`🎉 Application Submitted Successfully! Your CV matches ${cvScore}% of the requirements. You are eligible for the interview.`, 'success');
+        showCustomAlert(`🎉 Application Submitted Successfully! Your CV matches of the requirements. You are eligible for the interview.`, 'success');
       } else {
-        showCustomAlert(`📝 Application Submitted. Your CV matches ${cvScore}% of the requirements. You need 50% to be eligible for the interview.`, 'warning');
+        showCustomAlert(`📝 Application Submitted. Your CV matches of the requirements. You need 50% to be eligible for the interview.`, 'warning');
       }
     }
 
