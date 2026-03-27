@@ -54,6 +54,8 @@ const JobDetails = () => {
           a.jobId === foundJob.id && a.candidateId === userData.profileId
         );
         setHasApplied(applied);
+      } else {
+        setHasApplied(false);
       }
     } else {
       navigate('/jobs');
@@ -61,6 +63,17 @@ const JobDetails = () => {
 
     setLoading(false);
   }, [id, navigate]);
+
+  // Re-check application status when modal closes or when job changes
+  useEffect(() => {
+    if (user && user.type === 'candidate' && job) {
+      const allApplications = applications.getApplications();
+      const applied = allApplications.some(a => 
+        a.jobId === job.id && a.candidateId === user.profileId
+      );
+      setHasApplied(applied);
+    }
+  }, [user, job, showApplyModal]);
 
   const handleApply = () => {
     if (!user) {
@@ -71,10 +84,24 @@ const JobDetails = () => {
       alert('Only candidates can apply for jobs');
       return;
     }
+    
+    // Double-check if already applied
+    const allApplications = applications.getApplications();
+    const alreadyApplied = allApplications.some(a => 
+      a.jobId === job.id && a.candidateId === user.profileId
+    );
+    
+    if (alreadyApplied) {
+      alert('You have already applied for this position!');
+      setHasApplied(true);
+      return;
+    }
+    
     setShowApplyModal(true);
     setCvScore(null);
     setCvFile(null);
     setCvFileName('');
+    setApplicationData({ coverLetter: '' });
   };
 
   const handleCVUpload = async (e) => {
@@ -89,16 +116,10 @@ const JobDetails = () => {
       // Simulate CV parsing and analysis
       setTimeout(() => {
         // Calculate a random score between 30-90 for demo
-        // In production, you'd use actual CV parsing
         const randomScore = Math.floor(Math.random() * 60) + 30;
         setCvScore(randomScore);
         setCvAnalyzing(false);
       }, 1500);
-      
-      // In production, you'd use this:
-      // const cvText = await parseCVFile(file);
-      // const score = calculateCVJobMatch(cvText, job.description);
-      // setCvScore(score);
       
     } catch (error) {
       console.error('Error analyzing CV:', error);
@@ -121,9 +142,22 @@ const JobDetails = () => {
       return;
     }
     
+    // Final check before saving
+    const allApplications = applications.getApplications();
+    const alreadyApplied = allApplications.some(a => 
+      a.jobId === job.id && a.candidateId === user.profileId
+    );
+    
+    if (alreadyApplied) {
+      alert('You have already applied for this job!');
+      setShowApplyModal(false);
+      setHasApplied(true);
+      return;
+    }
+    
     // Get candidate
     const allCandidates = candidates.getCandidates();
-    const candidate = allCandidates.find(c => c.id === user.profileId);
+    let candidate = allCandidates.find(c => c.id === user.profileId);
 
     // Create new application with CV score
     const newApplication = applications.saveApplication({
@@ -135,7 +169,8 @@ const JobDetails = () => {
       candidateName: user.name,
       coverLetter: applicationData.coverLetter,
       resume: cvFileName,
-      cvScore: cvScore
+      cvScore: cvScore,
+      appliedAt: new Date().toISOString()
     });
 
     // Update job applicants count
@@ -173,7 +208,7 @@ const JobDetails = () => {
     return 'Below Requirements - Not Eligible for Interview';
   };
 
-  // 🔥 Helper function to format salary display
+  // Helper function to format salary display
   const formatSalary = (salary) => {
     if (!salary) return 'Not specified';
     if (salary.toLowerCase().includes('unpaid')) {
@@ -602,7 +637,6 @@ const JobDetails = () => {
             
             <div style={styles.jobMeta}>
               <span style={styles.metaItem}>📍 {job.location}</span>
-              {/* 🔥 UPDATED: Salary display with Unpaid handling */}
               <span style={styles.metaItem}>{formatSalary(job.salary)}</span>
               <span style={styles.metaItem}>⏰ {job.type}</span>
               <span style={styles.metaItem}>📅 Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
@@ -714,7 +748,6 @@ const JobDetails = () => {
                   <tr>
                     <td style={{padding: '0.5rem 0', color: '#666'}}>Salary:</td>
                     <td style={{padding: '0.5rem 0', color: '#333'}}>
-                      {/* 🔥 UPDATED: Salary in summary with Unpaid handling */}
                       {job.salary === 'Unpaid (Volunteer/Internship)' 
                         ? 'Unpaid Position' 
                         : job.salary}
@@ -725,10 +758,7 @@ const JobDetails = () => {
                     <td style={{padding: '0.5rem 0', color: '#333'}}>{new Date(job.postedDate).toLocaleDateString()}</td>
                   </tr>
                   <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>
-                      {/* 🔥 UPDATED: Changed from "Application Deadline" to "Job Deadline" */}
-                      Job Deadline:
-                    </td>
+                    <td style={{padding: '0.5rem 0', color: '#666'}}>Job Deadline:</td>
                     <td style={{padding: '0.5rem 0', color: '#333'}}>
                       {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'Not specified'}
                     </td>
@@ -760,7 +790,6 @@ const JobDetails = () => {
                     <div style={styles.relatedJobMeta}>
                       <span>📍 {relatedJob.location?.split(' ')[0] || relatedJob.location}</span>
                       <span>
-                        {/* 🔥 UPDATED: Related jobs salary with Unpaid handling */}
                         {relatedJob.salary === 'Unpaid (Volunteer/Internship)' 
                           ? 'Unpaid' 
                           : relatedJob.salary}
