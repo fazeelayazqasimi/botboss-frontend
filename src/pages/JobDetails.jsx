@@ -23,6 +23,7 @@ const JobDetails = () => {
   const [applicationData, setApplicationData] = useState({
     coverLetter: ''
   });
+  const [forceReupload, setForceReupload] = useState(false); // New state for force reupload
 
   useEffect(() => {
     // Check logged in user
@@ -47,12 +48,20 @@ const JobDetails = () => {
         .slice(0, 3);
       setRelatedJobs(related);
 
-      // Check if user has already applied
+      // CRITICAL FIX: Check if user has already applied with correct ID comparison
       if (userData && userData.type === 'candidate') {
         const allApplications = applications.getApplications();
-        const applied = allApplications.some(a => 
-          a.jobId === foundJob.id && a.candidateId === userData.profileId
-        );
+        console.log('Checking applications for job:', foundJob.id, 'candidate:', userData.profileId);
+        console.log('All applications:', allApplications);
+        
+        const applied = allApplications.some(a => {
+          // Convert both to numbers/strings for proper comparison
+          const jobIdMatch = Number(a.jobId) === Number(foundJob.id);
+          const candidateIdMatch = Number(a.candidateId) === Number(userData.profileId);
+          return jobIdMatch && candidateIdMatch;
+        });
+        
+        console.log('Has applied:', applied);
         setHasApplied(applied);
       } else {
         setHasApplied(false);
@@ -69,7 +78,7 @@ const JobDetails = () => {
     if (user && user.type === 'candidate' && job) {
       const allApplications = applications.getApplications();
       const applied = allApplications.some(a => 
-        a.jobId === job.id && a.candidateId === user.profileId
+        Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
       );
       setHasApplied(applied);
     }
@@ -88,15 +97,28 @@ const JobDetails = () => {
     // Double-check if already applied
     const allApplications = applications.getApplications();
     const alreadyApplied = allApplications.some(a => 
-      a.jobId === job.id && a.candidateId === user.profileId
+      Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
     );
     
     if (alreadyApplied) {
-      alert('You have already applied for this position!');
-      setHasApplied(true);
+      // Show option to upload again
+      const confirmReapply = window.confirm(
+        'You have already applied for this position.\n\nDo you want to upload your CV again? This will update your application.'
+      );
+      
+      if (confirmReapply) {
+        // Set force reupload mode
+        setForceReupload(true);
+        setShowApplyModal(true);
+        setCvScore(null);
+        setCvFile(null);
+        setCvFileName('');
+        setApplicationData({ coverLetter: '' });
+      }
       return;
     }
     
+    setForceReupload(false);
     setShowApplyModal(true);
     setCvScore(null);
     setCvFile(null);
@@ -142,13 +164,13 @@ const JobDetails = () => {
       return;
     }
     
-    // Final check before saving
-    const allApplications = applications.getApplications();
-    const alreadyApplied = allApplications.some(a => 
-      a.jobId === job.id && a.candidateId === user.profileId
+    // Get all applications
+    let allApplications = applications.getApplications();
+    const existingApplicationIndex = allApplications.findIndex(a => 
+      Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
     );
     
-    if (alreadyApplied) {
+    if (existingApplicationIndex !== -1 && !forceReupload) {
       alert('You have already applied for this job!');
       setShowApplyModal(false);
       setHasApplied(true);
@@ -157,43 +179,60 @@ const JobDetails = () => {
     
     // Get candidate
     const allCandidates = candidates.getCandidates();
-    let candidate = allCandidates.find(c => c.id === user.profileId);
+    let candidate = allCandidates.find(c => Number(c.id) === Number(user.profileId));
 
-    // Create new application with CV score
-    const newApplication = applications.saveApplication({
-      jobId: job.id,
-      jobTitle: job.title,
-      company: job.company,
-      companyId: company?.id,
-      candidateId: user.profileId,
-      candidateName: user.name,
-      coverLetter: applicationData.coverLetter,
-      resume: cvFileName,
-      cvScore: cvScore,
-      appliedAt: new Date().toISOString()
-    });
-
-    // Update job applicants count
-    jobs.incrementApplicants(job.id);
-
-    // Update candidate's applied jobs
-    if (candidate) {
-      const updatedCandidate = {
-        ...candidate,
-        appliedJobs: [...(candidate.appliedJobs || []), job.id]
+    let newApplication;
+    
+    if (existingApplicationIndex !== -1 && forceReupload) {
+      // Update existing application
+      const existingApp = allApplications[existingApplicationIndex];
+      newApplication = {
+        ...existingApp,
+        resume: cvFileName,
+        cvScore: cvScore,
+        coverLetter: applicationData.coverLetter || existingApp.coverLetter,
+        updatedAt: new Date().toISOString(),
+        reuploaded: true
       };
-      candidates.saveCandidate(updatedCandidate);
+      
+      // Update in array
+      allApplications[existingApplicationIndex] = newApplication;
+      localStorage.setItem('applications', JSON.stringify(allApplications));
+      
+      alert(`✅ Application updated! Your new CV matches ${cvScore}% of the requirements.`);
+    } else {
+      // Create new application
+      newApplication = applications.saveApplication({
+        jobId: job.id,
+        jobTitle: job.title,
+        company: job.company,
+        companyId: company?.id,
+        candidateId: user.profileId,
+        candidateName: user.name,
+        coverLetter: applicationData.coverLetter,
+        resume: cvFileName,
+        cvScore: cvScore,
+        appliedAt: new Date().toISOString()
+      });
+
+      // Update job applicants count only for new applications
+      jobs.incrementApplicants(job.id);
+
+      // Update candidate's applied jobs
+      if (candidate) {
+        const updatedCandidate = {
+          ...candidate,
+          appliedJobs: [...(candidate.appliedJobs || []), job.id]
+        };
+        candidates.saveCandidate(updatedCandidate);
+      }
+      
+      alert(`✅ Application submitted! Your CV matches ${cvScore}% of the requirements.`);
     }
 
     setShowApplyModal(false);
     setHasApplied(true);
-    
-    // Show message based on CV score
-    if (cvScore >= 50) {
-      alert(`✅ Application submitted! Your CV matches ${cvScore}% of the requirements. You are eligible for the interview.`);
-    } else {
-      alert(`⚠️ Application submitted. Your CV matches ${cvScore}% of the requirements. You need 50% to be eligible for the interview.`);
-    }
+    setForceReupload(false);
   };
 
   const getScoreColor = (score) => {
@@ -583,6 +622,15 @@ const JobDetails = () => {
       textAlign: 'center',
       padding: '3rem',
       color: '#667eea'
+    },
+    reuploadNote: {
+      background: '#fff3e0',
+      padding: '0.75rem',
+      borderRadius: '5px',
+      marginBottom: '1rem',
+      fontSize: '0.9rem',
+      color: '#ed6c02',
+      borderLeft: '3px solid #ed6c02'
     }
   };
 
@@ -649,7 +697,12 @@ const JobDetails = () => {
                 </button>
               )}
               {user?.type === 'candidate' && hasApplied && (
-                <span style={styles.appliedBadge}>✓ Applied</span>
+                <>
+                  <span style={styles.appliedBadge}>✓ Applied</span>
+                  <button onClick={handleApply} style={{...styles.applyBtn, background: '#ff9800'}}>
+                    Upload Again
+                  </button>
+                </>
               )}
               {!user && (
                 <button onClick={handleApply} style={styles.applyBtn}>
@@ -808,14 +861,24 @@ const JobDetails = () => {
         <div style={styles.modalOverlay} onClick={() => setShowApplyModal(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Apply for {job.title}</h2>
+              <h2 style={styles.modalTitle}>
+                {forceReupload ? 'Update Your Application' : `Apply for ${job.title}`}
+              </h2>
               <button style={styles.closeBtn} onClick={() => setShowApplyModal(false)}>×</button>
             </div>
+
+            {forceReupload && (
+              <div style={styles.reuploadNote}>
+                ⚠️ You have already applied for this position. Uploading again will update your existing application.
+              </div>
+            )}
 
             <form onSubmit={handleApplicationSubmit}>
               {/* CV Upload Section */}
               <div style={styles.cvSection}>
-                <label style={styles.cvLabel}>Upload CV *</label>
+                <label style={styles.cvLabel}>
+                  {forceReupload ? 'Upload Updated CV *' : 'Upload CV *'}
+                </label>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,.txt"
@@ -872,7 +935,7 @@ const JobDetails = () => {
                   style={styles.submitBtn}
                   disabled={!cvFile || cvAnalyzing}
                 >
-                  Submit Application
+                  {forceReupload ? 'Update Application' : 'Submit Application'}
                 </button>
                 <button 
                   type="button" 
