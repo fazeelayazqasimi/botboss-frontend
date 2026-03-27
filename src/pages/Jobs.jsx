@@ -440,11 +440,8 @@ const Jobs = () => {
                 Showing <strong>{filteredJobs.length}</strong> {filteredJobs.length === 1 ? 'job' : 'jobs'}
               </span>
               <select className="jobs-sort" value={sortBy} onChange={handleSortChange}>
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
                 <option value="salary-high">Salary: High to Low</option>
                 <option value="salary-low">Salary: Low to High</option>
-                <option value="relevant">Most Relevant</option>
               </select>
             </div>
 
