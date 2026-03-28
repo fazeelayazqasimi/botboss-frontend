@@ -811,11 +811,8 @@ const Report = () => {
   };
 
   const isCandidateView = () => {
-    if (!user || !report) return false;
-    if (user.type !== 'candidate') return false;
-    if (report.candidateId && user.profileId) return report.candidateId === user.profileId;
-    if (report.candidate_name && user.name) return report.candidate_name === user.name;
-    return false;
+    if (!user) return false;
+    return user.type === 'candidate';
   };
 
   const isCompanyView = () => {
