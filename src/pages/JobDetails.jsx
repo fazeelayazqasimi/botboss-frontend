@@ -1052,12 +1052,7 @@ const JobDetails = () => {
                 
                 {cvScore !== null && !cvAnalyzing && !uploadError && (
                   <div style={styles.cvScoreDisplay}>
-                    <div style={{
-                      ...styles.scoreMessage,
-                      color: getScoreColor(cvScore)
-                    }}>
-                      {getScoreMessage(cvScore)} - {cvScore}%
-                    </div>
+                    
                     <div style={styles.scoreDetail}>
                       {cvScore >= 50 
                         ? 'You are eligible for the interview process.'
