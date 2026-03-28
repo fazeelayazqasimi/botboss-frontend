@@ -18,7 +18,6 @@ const ic = {
   x:           'M18 6L6 18M6 6l12 12',
   alert:       'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
   refresh:     'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15',
-  eye:         'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 100 6 3 3 0 000-6z',
   zap:         'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
   target:      'M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z',
   clipboard:   'M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2M9 2h6a1 1 0 011 1v2a1 1 0 01-1 1H9a1 1 0 01-1-1V3a1 1 0 011-1z',
@@ -37,7 +36,8 @@ const ic = {
   briefcase:   'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
   users:       'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   send:        'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
-  eyeOff:      'M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22',
+  // ✅ NEW: engagement icon (replaces eye contact)
+  engagement:  'M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z',
 };
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ const C = {
   tealLight:   '#CCFBF1',
 };
 
-// Helper functions
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const scoreColor = (n) => {
   if (n >= 80) return C.green;
   if (n >= 60) return C.blue;
@@ -93,14 +93,12 @@ const scoreIcon = (n) => {
   if (n >= 40) return '👌';
   return '💪';
 };
-
 const recColor = (r = '') => {
   if (r.includes('Strongly')) return C.green;
   if (r.includes('Recommend')) return C.blue;
   if (r.includes('Consider')) return C.amber;
   return C.grey600;
 };
-
 const formatDate = (d) => {
   if (!d) return 'N/A';
   try {
@@ -193,21 +191,19 @@ const Ring = ({ value, size = 100, stroke = 8, showPercentage = true }) => {
           strokeLinecap="round"
           style={{ transition: 'stroke-dasharray 0.8s ease' }} />
       </svg>
-      <div style={{ 
-        position: 'absolute', 
-        inset: 0, 
-        display: 'flex', 
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center', 
-        flexDirection: 'column', 
-        gap: 2 
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 2
       }}>
         {showPercentage ? (
-          <>
-            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: C.grey900, lineHeight: 1 }}>
-              {value}%
-            </span>
-          </>
+          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: C.grey900, lineHeight: 1 }}>
+            {value}%
+          </span>
         ) : (
           <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>
             {scoreIcon(value)}
@@ -218,8 +214,8 @@ const Ring = ({ value, size = 100, stroke = 8, showPercentage = true }) => {
   );
 };
 
-// ─── Score metric card (with percentage toggle) ──────────────────────────────
-const MetricCard = ({ icon, label: lbl, value, showPercentage = true }) => (
+// ─── Score metric card ────────────────────────────────────────────────────────
+const MetricCard = ({ label: lbl, value, showPercentage = true }) => (
   <div style={{ ...card, padding: '1.25rem', textAlign: 'center' }}>
     <Ring value={value} size={88} stroke={7} showPercentage={showPercentage} />
     <div style={{ ...label, display: 'block', marginBottom: '4px', marginTop: '8px' }}>{lbl}</div>
@@ -229,11 +225,11 @@ const MetricCard = ({ icon, label: lbl, value, showPercentage = true }) => (
   </div>
 );
 
-// ─── Question item with percentage toggle ─────────────────────────────────────
+// ─── Question item ────────────────────────────────────────────────────────────
 const QuestionItem = ({ qa, index, showPercentage = true }) => {
   const qScore = qa.score || 0;
   const isText = qa.mode === 'text' || !qa.mode;
-  
+
   return (
     <div style={{ border: `1px solid ${C.grey200}`, borderRadius: '12px',
       overflow: 'hidden', marginBottom: '12px' }}>
@@ -282,6 +278,27 @@ const QuestionItem = ({ qa, index, showPercentage = true }) => {
             </p>
           </div>
         )}
+
+        {/* ✅ Per-question soft scores (only company sees percentages) */}
+        {(qa.confidence_score != null || qa.clarity_score != null || qa.engagement_score != null) && (
+          <div style={{ display: 'flex', gap: '8px', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            {qa.confidence_score != null && (
+              <span style={chip(scoreBg(qa.confidence_score), scoreColor(qa.confidence_score))}>
+                ⚡ Confidence: {showPercentage ? `${qa.confidence_score}%` : scoreLabel(qa.confidence_score)}
+              </span>
+            )}
+            {qa.clarity_score != null && (
+              <span style={chip(scoreBg(qa.clarity_score), scoreColor(qa.clarity_score))}>
+                🎯 Clarity: {showPercentage ? `${qa.clarity_score}%` : scoreLabel(qa.clarity_score)}
+              </span>
+            )}
+            {qa.engagement_score != null && (
+              <span style={chip(scoreBg(qa.engagement_score), scoreColor(qa.engagement_score))}>
+                ✍️ Engagement: {showPercentage ? `${qa.engagement_score}%` : scoreLabel(qa.engagement_score)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -298,14 +315,11 @@ const Report = () => {
   const [candidateInfo, setCandidateInfo] = useState(null);
   const [companyInfo, setCompanyInfo] = useState(null);
 
-  // ✅ FIXED: Correct API URL
   const API_URL = (process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space').replace(/\/$/, '');
 
   useEffect(() => {
-    // Get current user
     const userData = JSON.parse(localStorage.getItem('user'));
     setUser(userData);
-    
     fetchReport();
   }, [sessionId]);
 
@@ -316,18 +330,15 @@ const Report = () => {
       if (!r.ok) throw new Error(r.status === 404
         ? 'Report not found. The interview may not be completed yet.'
         : 'Failed to fetch report');
-      
       const reportData = await r.json();
       setReport(reportData);
-      
-      // Try to get candidate info from localStorage
+
       try {
         const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
         const found = candidates.find(c => c.id === reportData.candidateId || c.name === reportData.candidate_name);
         if (found) setCandidateInfo(found);
-      } catch (e) { console.log('No candidate info'); }
+      } catch (e) {}
 
-      // Try to get company info from localStorage
       try {
         const companies = JSON.parse(localStorage.getItem('companies') || '[]');
         const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
@@ -336,43 +347,30 @@ const Report = () => {
           const found = companies.find(c => c.id === job.companyId);
           if (found) setCompanyInfo(found);
         }
-      } catch (e) { console.log('No company info'); }
+      } catch (e) {}
 
     } catch (e) {
       setError(e.message || 'Could not load interview report');
     } finally { setLoading(false); }
   };
 
-  // Check if current user is the candidate who gave the interview
   const isCandidateView = () => {
     if (!user || !report) return false;
     if (user.type !== 'candidate') return false;
-    
-    // Check if this candidate owns the report
-    if (report.candidateId && user.profileId) {
-      return report.candidateId === user.profileId;
-    }
-    if (report.candidate_name && user.name) {
-      return report.candidate_name === user.name;
-    }
+    if (report.candidateId && user.profileId) return report.candidateId === user.profileId;
+    if (report.candidate_name && user.name) return report.candidate_name === user.name;
     return false;
   };
 
-  // Check if current user is the company who posted the job
   const isCompanyView = () => {
     if (!user || !report) return false;
     if (user.type !== 'company') return false;
-    
-    // Check if this company owns the job
-    if (report.jobId && companyInfo) {
-      return true; // We have company info, so it's likely their job
-    }
+    if (report.jobId && companyInfo) return true;
     return false;
   };
 
-  // Determine view type and whether to show percentages
   const viewType = isCandidateView() ? 'candidate' : (isCompanyView() ? 'company' : 'public');
-  const showPercentage = viewType === 'company'; // Only companies see percentages
+  const showPercentage = viewType === 'company';
 
   if (loading) return (
     <Page>
@@ -439,8 +437,6 @@ const Report = () => {
                   {formatDate(report.completion_date || report.interview_date)}
                 </div>
               )}
-              
-              {/* Show candidate/company info based on view */}
               {viewType === 'company' && candidateInfo && (
                 <div style={chip(C.blueLight, C.blue)}>
                   <Icon d={ic.users} size={11} color={C.blue} />
@@ -453,13 +449,11 @@ const Report = () => {
                   Company: {companyInfo.name}
                 </div>
               )}
-              
-              {/* 🔥 View type indicator */}
               <div style={chip(
                 viewType === 'company' ? C.greenLight : (viewType === 'candidate' ? C.blueLight : C.grey100),
                 viewType === 'company' ? C.green : (viewType === 'candidate' ? C.blue : C.grey600)
               )}>
-                <Icon d={viewType === 'company' ? ic.briefcase : (viewType === 'candidate' ? ic.users : ic.eye)} size={11} />
+                <Icon d={viewType === 'company' ? ic.briefcase : (viewType === 'candidate' ? ic.users : ic.engagement)} size={11} />
                 {viewType === 'company' ? 'Company View' : (viewType === 'candidate' ? 'Candidate View' : 'Public View')}
               </div>
             </div>
@@ -515,39 +509,39 @@ const Report = () => {
                   strokeDasharray={`${(overall / 100) * 2 * Math.PI * 50} ${2 * Math.PI * 50}`}
                   strokeLinecap="round" />
               </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-                justifyContent: 'center' }}>
-                {showPercentage ? (
-                  <Icon d={ic.star} size={28} color={C.white} />
-                ) : (
-                  <span style={{ fontSize: '1.8rem', color: C.white }}>{scoreIcon(overall)}</span>
-                )}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon d={ic.star} size={28} color={C.white} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Score metrics ── */}
+        {/* ── Score metrics — ✅ FIXED: engagement_score replaces eye_contact_score ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '12px', marginBottom: '1.25rem' }}>
-          <MetricCard 
-            icon={ic.eye}    
-            label="Eye Contact" 
-            value={report.eye_contact_score || 0} 
-            showPercentage={showPercentage} 
+
+          {/* ✅ Engagement Score (was eye_contact_score — now real AI score) */}
+          <MetricCard
+            label="Engagement"
+            value={report.engagement_score || 0}
+            showPercentage={showPercentage}
           />
-          <MetricCard 
-            icon={ic.zap}    
-            label="Confidence"  
-            value={report.confidence_score  || 0} 
-            showPercentage={showPercentage} 
+
+          {/* ✅ Confidence Score (real AI score) */}
+          <MetricCard
+            label="Confidence"
+            value={report.confidence_score || 0}
+            showPercentage={showPercentage}
           />
-          <MetricCard 
-            icon={ic.target} 
-            label="Clarity"     
-            value={report.clarity_score     || 0} 
-            showPercentage={showPercentage} 
+
+          {/* ✅ Clarity Score (real AI score) */}
+          <MetricCard
+            label="Clarity"
+            value={report.clarity_score || 0}
+            showPercentage={showPercentage}
           />
+
+          {/* Questions answered ring */}
           <div style={{ ...card, padding: '1.25rem', textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.5rem' }}>
               <svg width={88} height={88} style={{ transform: 'rotate(-90deg)' }}>
@@ -601,7 +595,8 @@ const Report = () => {
             <ul style={{ margin: 0, padding: '0.5rem 0', listStyle: 'none' }}>
               {report.strengths?.length > 0 ? report.strengths.map((s, i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px',
-                  padding: '0.625rem 1.25rem', borderBottom: i < report.strengths.length - 1 ? `1px solid ${C.grey100}` : 'none' }}>
+                  padding: '0.625rem 1.25rem',
+                  borderBottom: i < report.strengths.length - 1 ? `1px solid ${C.grey100}` : 'none' }}>
                   <div style={{ width: 18, height: 18, borderRadius: '50%', background: C.greenLight,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
                     <Icon d={ic.check} size={10} color={C.green} sw={2.5} />
@@ -626,7 +621,8 @@ const Report = () => {
             <ul style={{ margin: 0, padding: '0.5rem 0', listStyle: 'none' }}>
               {report.weaknesses?.length > 0 ? report.weaknesses.map((w, i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px',
-                  padding: '0.625rem 1.25rem', borderBottom: i < report.weaknesses.length - 1 ? `1px solid ${C.grey100}` : 'none' }}>
+                  padding: '0.625rem 1.25rem',
+                  borderBottom: i < report.weaknesses.length - 1 ? `1px solid ${C.grey100}` : 'none' }}>
                   <div style={{ width: 18, height: 18, borderRadius: '50%', background: C.amberLight,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
                     <Icon d={ic.alert} size={10} color={C.amber} sw={2} />
@@ -655,15 +651,9 @@ const Report = () => {
               </span>
             )}
           </div>
-
           <div style={{ padding: '1rem 1.25rem' }}>
             {report.question_analysis?.length > 0 ? report.question_analysis.map((qa, i) => (
-              <QuestionItem 
-                key={i} 
-                qa={qa} 
-                index={i} 
-                showPercentage={showPercentage} 
-              />
+              <QuestionItem key={i} qa={qa} index={i} showPercentage={showPercentage} />
             )) : (
               <p style={{ ...body, textAlign: 'center', padding: '2rem 0' }}>
                 No question analysis available.
@@ -672,45 +662,45 @@ const Report = () => {
           </div>
         </div>
 
-        {/* ── Company Contact Section (for candidate view) ── */}
+        {/* ── Company Contact Section ── */}
         {viewType === 'candidate' && companyInfo && (
           <div style={{ ...card, marginBottom: '1.75rem', border: `1px solid ${C.blue}30`, background: C.blueLight }}>
-            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <div style={{ ...label, color: C.blue }}>Next Steps</div>
                 <p style={{ ...body, color: C.grey900, marginTop: '4px', fontSize: '0.9rem' }}>
                   The company has received your interview report. They will contact you if you're shortlisted.
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Link to={`/company/${companyInfo.id}`} 
-                  style={{ ...btn, background: C.white, color: C.blue, border: `1.5px solid ${C.blue}` }}>
-                  <Icon d={ic.briefcase} size={14} color={C.blue} />
-                  View Company Profile
-                </Link>
-              </div>
+              <Link to={`/company/${companyInfo.id}`}
+                style={{ ...btn, background: C.white, color: C.blue, border: `1.5px solid ${C.blue}` }}>
+                <Icon d={ic.briefcase} size={14} color={C.blue} />
+                View Company Profile
+              </Link>
             </div>
           </div>
         )}
 
-        {/* ── Candidate Contact Section (for company view) ── */}
+        {/* ── Candidate Contact Section ── */}
         {viewType === 'company' && candidateInfo && (
           <div style={{ ...card, marginBottom: '1.75rem', border: `1px solid ${C.green}30`, background: C.greenLight }}>
-            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <div style={{ ...label, color: C.green }}>Candidate Contact</div>
                 <p style={{ ...body, color: C.grey900, marginTop: '4px', fontSize: '0.9rem' }}>
                   {candidateInfo.name} • {candidateInfo.email}
                 </p>
-                {candidateInfo.phone && <p style={{ ...body, color: C.grey900, fontSize: '0.85rem' }}>{candidateInfo.phone}</p>}
+                {candidateInfo.phone && (
+                  <p style={{ ...body, color: C.grey900, fontSize: '0.85rem' }}>{candidateInfo.phone}</p>
+                )}
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => window.location.href = `mailto:${candidateInfo.email}`}
-                  style={{ ...btn, background: C.green, color: C.white }}>
-                  <Icon d={ic.send} size={14} color={C.white} />
-                  Contact Candidate
-                </button>
-              </div>
+              <button onClick={() => window.location.href = `mailto:${candidateInfo.email}`}
+                style={{ ...btn, background: C.green, color: C.white }}>
+                <Icon d={ic.send} size={14} color={C.white} />
+                Contact Candidate
+              </button>
             </div>
           </div>
         )}
