@@ -10,8 +10,11 @@ const post = async (url, data) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
-  if (!res.ok) throw new Error((await res.json()).detail || "Error");
-  return res.json();
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch { throw new Error(text || "Server error"); }
+  if (!res.ok) throw new Error(json.detail || "Error");
+  return json;
 };
 
 const get = async (url) => {
@@ -44,7 +47,6 @@ export const saveUser = async (userData) => {
 };
 
 export const findUserByEmail = async (email) => {
-  // Backend signup khud handle karta hai duplicate check
   return null;
 };
 
@@ -142,7 +144,6 @@ export const getApplicationsByCompany = async (companyId) => {
 };
 
 export const saveApplication = async (formData) => {
-  // formData = FormData object (resume upload ke liye)
   const res = await fetch(`${API}/applications/`, {
     method: "POST",
     body: formData
@@ -156,7 +157,7 @@ export const updateApplicationStatus = async (appId, status) => {
 };
 
 // ==============================================
-// INTERVIEWS (Backend se)
+// INTERVIEWS
 // ==============================================
 
 export const scheduleInterview = async (interviewData) => {
@@ -168,15 +169,12 @@ export const scheduleInterview = async (interviewData) => {
 // ==============================================
 
 export const getStats = async () => {
-  const [jobs, applications] = await Promise.all([
-    getJobs(),
-    get("/applications/")
-  ]);
+  const jobs = await getJobs();
   return {
     totalJobs: jobs.length,
     activeJobs: jobs.filter(j => j.status === "active").length,
-    totalApplications: applications.length,
-    placements: applications.filter(a => a.status === "hired").length
+    totalApplications: 0,
+    placements: 0
   };
 };
 
