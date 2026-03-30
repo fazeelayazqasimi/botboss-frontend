@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -158,6 +158,10 @@ const s = {
 const Interview = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // ✅ Get applicationId from navigation state
+  const applicationId = location.state?.applicationId;
 
   const [user, setUser] = useState(null);
   const [job, setJob] = useState(null);
@@ -175,14 +179,10 @@ const Interview = () => {
   const [processing, setProcessing] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(true);
 
-  // ✅ REMOVED: eyeContactWarning state (was fake/random — no longer needed)
-
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
-
-  // ✅ REMOVED: eyeCheckRef (was running random Math.random() check — fake)
 
   const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
 
@@ -190,10 +190,21 @@ const Interview = () => {
     const userData = JSON.parse(localStorage.getItem('user'));
     if (!userData || userData.type !== 'candidate') { navigate('/login'); return; }
     setUser(userData);
-    const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    const jobData = jobs.find(j => j.id === parseInt(jobId));
-    if (jobData) setJob(jobData);
-    else navigate('/jobs');
+    
+    // Fetch job details
+    const fetchJob = async () => {
+      try {
+        const res = await fetch(`${API_URL}/jobs/${jobId}`);
+        if (res.ok) {
+          const jobData = await res.json();
+          setJob(jobData);
+        }
+      } catch (e) {
+        console.error('Failed to fetch job:', e);
+      }
+    };
+    fetchJob();
+    
     checkBackendConnection();
     checkVoiceAvailability();
   }, [jobId, navigate]);
@@ -213,14 +224,12 @@ const Interview = () => {
     } catch { setBackendStatus('error'); setError('Cannot connect to backend'); }
   };
 
-  // ✅ FIXED: Cleanup — removed eyeCheckRef cleanup (no longer exists)
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (mediaRecorderRef.current && isRecording)
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
   }, []);
 
-  // Timer countdown
   useEffect(() => {
     if (status === 'recording' && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
@@ -230,25 +239,47 @@ const Interview = () => {
     return () => clearTimeout(timerRef.current);
   }, [timeLeft, status]);
 
-  // ✅ REMOVED: entire fake eye contact useEffect block
-  // Previously: setInterval with Math.random() > 0.7 → setEyeContactWarning(true)
-  // This was 100% fake and misleading — removed completely
+  // ✅ Update application status to interview_completed after interview
+  const updateApplicationStatus = async (newStatus) => {
+    if (!applicationId) return;
+    try {
+      await fetch(`${API_URL}/applications/${applicationId}/status?status=${newStatus}`, {
+        method: 'PATCH'
+      });
+      console.log(`✅ Application ${applicationId} status updated to ${newStatus}`);
+    } catch (e) {
+      console.error('Failed to update application status:', e);
+    }
+  };
 
+  // ✅ Start Interview with applicationId
   const startInterview = async () => {
     try {
-      setStatus('loading'); setError('');
+      setStatus('loading'); 
+      setError('');
+      
       const jobDesc = job?.description || job?.title || 'General position interview';
+      
+      console.log('Starting interview with applicationId:', applicationId);
+      
       const r = await fetch(`${API_URL}/interview/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_description: jobDesc }),
+        body: JSON.stringify({ 
+          job_description: jobDesc,
+          application_id: applicationId,
+          job_id: jobId,
+          user_id: user?.id
+        }),
       });
+      
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       setSessionId(data.session_id);
       setTotalQuestions(data.questions_count || 5);
       await getNextQuestion(data.session_id);
     } catch (e) {
+      console.error('Start interview error:', e);
       setError('Failed to start interview. Please try again.');
       setStatus('initial');
     }
@@ -261,15 +292,20 @@ const Interview = () => {
       const data = await r.json();
       if (data.message === 'Interview Completed' || data.status === 'completed') {
         setStatus('completed');
+        // ✅ Update application status when interview completes
+        await updateApplicationStatus('interview_completed');
         setTimeout(() => navigate(`/report/${sid}`), 2000);
       } else {
         setCurrentQuestion(data.question);
         setQuestionNumber(data.question_number);
         setTotalQuestions(data.total_questions || 5);
-        setStatus('ready'); setTimeLeft(60); setAnswerText('');
+        setStatus('ready'); 
+        setTimeLeft(60); 
+        setAnswerText('');
       }
     } catch {
-      setError('Failed to load question.'); setStatus('ready');
+      setError('Failed to load question.'); 
+      setStatus('ready');
     }
   };
 
@@ -308,6 +344,7 @@ const Interview = () => {
       const data = await r.json();
       if (data.completed) {
         setStatus('completed');
+        await updateApplicationStatus('interview_completed');
         setTimeout(() => navigate(`/report/${sessionId}`), 2000);
       } else {
         await getNextQuestion(sessionId);
@@ -329,6 +366,7 @@ const Interview = () => {
       const data = await r.json();
       if (data.completed) {
         setStatus('completed');
+        await updateApplicationStatus('interview_completed');
         setTimeout(() => navigate(`/report/${sessionId}`), 2000);
       } else {
         await getNextQuestion(sessionId);
@@ -345,7 +383,6 @@ const Interview = () => {
   const timerColor = timeLeft < 10 ? C.red : timeLeft < 20 ? C.amber : C.grey900;
   const progress = (questionNumber / totalQuestions) * 100;
 
-  // ── Backend error ────────────────────────────────────────────────────────
   if (backendStatus === 'error') return (
     <Page>
       <CenteredCard>
@@ -364,7 +401,6 @@ const Interview = () => {
     </Page>
   );
 
-  // ── Loading ───────────────────────────────────────────────────────────────
   if (status === 'loading') return (
     <Page>
       <CenteredCard>
@@ -379,7 +415,6 @@ const Interview = () => {
     </Page>
   );
 
-  // ── Completed ─────────────────────────────────────────────────────────────
   if (status === 'completed') return (
     <Page>
       <CenteredCard>
@@ -399,7 +434,6 @@ const Interview = () => {
     </Page>
   );
 
-  // ── Initial / Start ───────────────────────────────────────────────────────
   if (status === 'initial') return (
     <Page>
       <div style={s.container}>
@@ -410,7 +444,12 @@ const Interview = () => {
               <div>
                 <div style={s.label}>AI Interview</div>
                 <h1 style={{ ...s.h1, marginTop: '4px' }}>{job ? job.title : 'Interview Session'}</h1>
-                {job && <div style={{ ...s.body, color: C.purple, fontWeight: 600, marginTop: '2px' }}>{job.company}</div>}
+                {job && <div style={{ ...s.body, color: C.purple, fontWeight: 600, marginTop: '2px' }}>{job.company_name || 'Company'}</div>}
+                {applicationId && (
+                  <div style={{ ...s.body, fontSize: '0.7rem', color: C.grey400, marginTop: '4px' }}>
+                    Application ID: {applicationId.slice(0, 8)}...
+                  </div>
+                )}
               </div>
               <div style={{ ...s.chip(C.greenLight, C.green) }}>
                 <div style={{ ...s.dot(C.green) }} />
@@ -445,8 +484,8 @@ const Interview = () => {
             <div style={s.divider} />
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-              <button style={{ ...s.btn, ...s.btnGhost }} onClick={() => navigate('/jobs')}>
-                Back to Jobs
+              <button style={{ ...s.btn, ...s.btnGhost }} onClick={() => navigate('/my-applications')}>
+                Back to Applications
               </button>
               <button style={{ ...s.btn, ...s.btnPrimary }} onClick={startInterview}>
                 Start Interview
@@ -459,7 +498,6 @@ const Interview = () => {
     </Page>
   );
 
-  // ── Main interview ────────────────────────────────────────────────────────
   return (
     <Page>
       <div style={s.container}>
@@ -469,13 +507,12 @@ const Interview = () => {
           </div>
 
           <div style={s.cardPad}>
-            {/* Header row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>
                 <div style={s.label}>Question {questionNumber} of {totalQuestions}</div>
                 {job && (
                   <div style={{ ...s.body, fontWeight: 600, color: C.purple, fontSize: '0.85rem', marginTop: '2px' }}>
-                    {job.title} — {job.company}
+                    {job.title} — {job.company_name || 'Company'}
                   </div>
                 )}
               </div>
@@ -498,7 +535,6 @@ const Interview = () => {
               )}
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{ ...s.notice(C.redLight, `${C.red}50`, C.red), marginBottom: '1.25rem' }}>
                 <Icon d={icons.alert} size={16} color={C.red} />
@@ -506,7 +542,6 @@ const Interview = () => {
               </div>
             )}
 
-            {/* Question */}
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ ...s.label, marginBottom: '8px' }}>Current Question</div>
               <div style={s.questionBox}>{currentQuestion}</div>
@@ -514,16 +549,12 @@ const Interview = () => {
 
             <div style={s.divider} />
             <div style={{ marginTop: '1.5rem' }}>
-
-              {/* Video feed */}
               {(status === 'recording' || inputMode === 'voice') && (
                 <div style={{ ...s.videoWrap, marginBottom: '1.25rem' }}>
                   <video ref={videoRef} autoPlay muted style={s.video} />
-                  {/* ✅ REMOVED: fake eye contact overlay — was showing random warnings */}
                 </div>
               )}
 
-              {/* Mode tabs */}
               {status === 'ready' && !processing && (
                 <div style={{ ...s.tabRow, marginBottom: '1.25rem' }}>
                   <button style={s.tab(inputMode === 'text')} onClick={() => { setInputMode('text'); setError(''); }}>
@@ -539,7 +570,6 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Text input */}
               {status === 'ready' && inputMode === 'text' && !processing && (
                 <div style={{ marginBottom: '1rem' }}>
                   <textarea
@@ -558,7 +588,6 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Voice warning */}
               {status === 'ready' && inputMode === 'voice' && !processing && (
                 <div style={{ ...s.notice(C.amberLight, `${C.amber}60`, C.amber), marginBottom: '1rem' }}>
                   <Icon d={icons.alert} size={16} color={C.amber} />
@@ -566,7 +595,6 @@ const Interview = () => {
                 </div>
               )}
 
-              {/* Action buttons */}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 {status === 'ready' && !processing && (
                   <button style={{ ...s.btn, ...s.btnGhost }} onClick={cancelInterview}>
@@ -605,7 +633,6 @@ const Interview = () => {
                 )}
               </div>
 
-              {/* Status line */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px',
                 marginTop: '1rem', justifyContent: 'flex-end' }}>
                 {status === 'ready' && inputMode === 'text' && !processing && (
