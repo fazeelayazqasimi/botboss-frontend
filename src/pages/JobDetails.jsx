@@ -192,7 +192,9 @@ const JobDetails = () => {
     try {
       const formData = new FormData();
       formData.append('job_id', id);
-      formData.append('candidate_id', user.id);
+      formData.append('user_id', user.id);
+      formData.append('candidate_name', user.name || '');
+      formData.append('candidate_email', user.email || '');
       formData.append('cover_letter', applicationData.coverLetter);
       formData.append('resume', cvFile);
       await saveApplication(formData);
