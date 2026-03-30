@@ -44,7 +44,7 @@ const C = {
   amber:'#D97706', amberLight:'#FEF3C7', blue:'#2563EB', blueLight:'#DBEAFE',
 };
 
-const font = "'Poppins', sans-serif";
+const font = "'Inter', sans-serif";
 const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
 
 const chip = (bg, color, extra = {}) => ({
@@ -162,16 +162,17 @@ const CompanyDashboard = () => {
     setUpdatingId(appId);
     try {
       await updateAppStatus(appId, newStatus);
-      // Update local state immediately
       setApplications(prev => prev.map(a =>
         a.id === appId ? { ...a, status: newStatus } : a
       ));
-      // Update stats
+      const updatedApps = applications.map(a =>
+        a.id === appId ? { ...a, status: newStatus } : a
+      );
       setStats(prev => ({
         ...prev,
-        shortlisted: applications.filter(a => (a.id === appId ? newStatus : a.status) === 'shortlisted').length,
-        interviews: applications.filter(a => ['interview_scheduled','interview_completed'].includes(a.id === appId ? newStatus : a.status)).length,
-        hired: applications.filter(a => (a.id === appId ? newStatus : a.status) === 'hired').length,
+        shortlisted: updatedApps.filter(a => a.status === 'shortlisted').length,
+        interviews: updatedApps.filter(a => ['interview_scheduled','interview_completed'].includes(a.status)).length,
+        hired: updatedApps.filter(a => a.status === 'hired').length,
       }));
     } catch (e) {
       console.error(e);
@@ -239,7 +240,6 @@ const CompanyDashboard = () => {
     <PageShell>
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'2rem 1.25rem', fontFamily:font }}>
 
-        {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start',
           flexWrap:'wrap', gap:'1rem', marginBottom:'2rem' }}>
           <div>
@@ -268,7 +268,6 @@ const CompanyDashboard = () => {
           </div>
         </div>
 
-        {/* Stats */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',
           gap:12, marginBottom:'1.75rem' }}>
           {STATS.map((s,i) => (
@@ -288,7 +287,6 @@ const CompanyDashboard = () => {
           ))}
         </div>
 
-        {/* Tabs */}
         <div style={{ display:'flex', gap:4, marginBottom:'1.25rem',
           borderBottom:`1px solid ${C.grey200}`, overflowX:'auto' }}>
           {TABS.map(t => {
@@ -309,10 +307,8 @@ const CompanyDashboard = () => {
           })}
         </div>
 
-        {/* Tab Content */}
         <div style={card}>
 
-          {/* Overview */}
           {activeTab === 'overview' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="Recent Applications">
@@ -369,7 +365,6 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* Jobs */}
           {activeTab === 'jobs' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="My Jobs">
@@ -383,10 +378,7 @@ const CompanyDashboard = () => {
                 const appCount = applications.filter(a => a.job_id === job.id).length;
                 return (
                   <div key={job.id} style={{ border:`1px solid ${C.grey200}`, borderRadius:12,
-                    padding:'1.125rem 1.25rem', marginBottom:10,
-                    transition:'box-shadow 0.2s, border-color 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.07)'; e.currentTarget.style.borderColor=C.purpleMid; }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor=C.grey200; }}>
+                    padding:'1.125rem 1.25rem', marginBottom:10 }}>
                     <div style={{ display:'flex', justifyContent:'space-between',
                       alignItems:'flex-start', flexWrap:'wrap', gap:8, marginBottom:8 }}>
                       <h3 style={{ fontSize:'1rem', fontWeight:700, color:C.grey900, margin:0 }}>
@@ -426,20 +418,19 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* Applications */}
           {activeTab === 'applications' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="All Applications">
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   {[
-                    { key:'all',                  label:'All' },
-                    { key:'pending',              label:'Applied' },
-                    { key:'reviewed',             label:'Under Review' },
-                    { key:'shortlisted',          label:'Shortlisted' },
-                    { key:'interview_scheduled',  label:'Scheduled' },
-                    { key:'interview_completed',  label:'Completed' },
-                    { key:'rejected',             label:'Rejected' },
-                    { key:'hired',                label:'Hired' },
+                    { key:'all', label:'All' },
+                    { key:'pending', label:'Applied' },
+                    { key:'reviewed', label:'Under Review' },
+                    { key:'shortlisted', label:'Shortlisted' },
+                    { key:'interview_scheduled', label:'Scheduled' },
+                    { key:'interview_completed', label:'Completed' },
+                    { key:'rejected', label:'Rejected' },
+                    { key:'hired', label:'Hired' },
                   ].map(f => (
                     <button key={f.key} onClick={() => setStatusFilter(f.key)}
                       style={{ ...btn, height:32, fontSize:'0.75rem',
@@ -461,10 +452,10 @@ const CompanyDashboard = () => {
 
               {filtered.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1000 }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1100 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Email','Job','Applied','Status','Actions'].map(h => (
+                        {['Candidate','Email','Job','Applied','CV Score','Status','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -483,15 +474,43 @@ const CompanyDashboard = () => {
                             <td style={{ ...td, color:C.grey600 }}>
                               {new Date(app.applied_at).toLocaleDateString()}
                             </td>
+                            {/* CV Score Column - Show to company only */}
+                            <td style={td}>
+                              {app.cv_score ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ 
+                                    width: '60px', 
+                                    height: '6px', 
+                                    background: '#E2E6EF', 
+                                    borderRadius: '3px',
+                                    overflow: 'hidden'
+                                  }}>
+                                    <div style={{ 
+                                      width: `${app.cv_score}%`, 
+                                      height: '100%', 
+                                      background: app.cv_score >= 70 ? '#059669' : app.cv_score >= 50 ? '#7C3AED' : '#DC2626',
+                                      borderRadius: '3px'
+                                    }} />
+                                  </div>
+                                  <span style={{ 
+                                    fontWeight: 600, 
+                                    fontSize: '0.8rem',
+                                    color: app.cv_score >= 70 ? '#059669' : app.cv_score >= 50 ? '#7C3AED' : '#DC2626'
+                                  }}>
+                                    {app.cv_score}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span style={{ color: '#9CA3B8', fontSize: '0.75rem' }}>—</span>
+                              )}
+                            </td>
                             <td style={td}>
                               <span style={chip(sBg, sCol)}>
                                 {STATUS_MAP[app.status] || app.status}
                               </span>
                             </td>
                             <td style={td}>
-                              <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
-
-                                {/* Status dropdown */}
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                                 <select
                                   value={app.status}
                                   disabled={isUpdating}
@@ -500,77 +519,19 @@ const CompanyDashboard = () => {
                                     padding:'4px 8px', borderRadius:6,
                                     background:sBg, color:sCol,
                                     border:`1px solid ${sCol}40`,
-                                    cursor:isUpdating?'not-allowed':'pointer', outline:'none',
-                                    opacity:isUpdating?0.6:1 }}>
+                                    cursor:isUpdating?'not-allowed':'pointer', outline:'none' }}>
                                   {[
-                                    { val:'pending',              label:'Applied' },
-                                    { val:'reviewed',             label:'Under Review' },
-                                    { val:'shortlisted',          label:'Shortlisted' },
-                                    { val:'interview_scheduled',  label:'Interview Scheduled' },
-                                    { val:'interview_completed',  label:'Interview Completed' },
-                                    { val:'rejected',             label:'Rejected' },
-                                    { val:'hired',                label:'Hired' },
+                                    { val:'pending', label:'Applied' },
+                                    { val:'reviewed', label:'Under Review' },
+                                    { val:'shortlisted', label:'Shortlisted' },
+                                    { val:'interview_scheduled', label:'Interview Scheduled' },
+                                    { val:'interview_completed', label:'Interview Completed' },
+                                    { val:'rejected', label:'Rejected' },
+                                    { val:'hired', label:'Hired' },
                                   ].map(s => (
                                     <option key={s.val} value={s.val}>{s.label}</option>
                                   ))}
                                 </select>
-
-                                {/* Schedule Interview button — shows when shortlisted */}
-                                {app.status === 'shortlisted' && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={() => updateStatus(app.id, 'interview_scheduled')}
-                                    style={{ ...btn, height:32, fontSize:'0.75rem',
-                                      background:C.purple, color:C.white, border:'none',
-                                      opacity:isUpdating?0.6:1,
-                                      cursor:isUpdating?'not-allowed':'pointer' }}>
-                                    <Icon d={ic.calendar} size={12} color={C.white} />
-                                    {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
-                                  </button>
-                                )}
-
-                                {/* Hire button — shows when interview completed */}
-                                {app.status === 'interview_completed' && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={() => updateStatus(app.id, 'hired')}
-                                    style={{ ...btn, height:32, fontSize:'0.75rem',
-                                      background:C.green, color:C.white, border:'none',
-                                      opacity:isUpdating?0.6:1,
-                                      cursor:isUpdating?'not-allowed':'pointer' }}>
-                                    <Icon d={ic.check} size={12} color={C.white} />
-                                    {isUpdating ? 'Hiring...' : 'Hire'}
-                                  </button>
-                                )}
-
-                                {/* Reject button — shows when applied or reviewed */}
-                                {['pending','reviewed'].includes(app.status) && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={() => updateStatus(app.id, 'rejected')}
-                                    style={{ ...btn, height:32, fontSize:'0.75rem',
-                                      background:C.redLight, color:C.red, border:'none',
-                                      opacity:isUpdating?0.6:1,
-                                      cursor:isUpdating?'not-allowed':'pointer' }}>
-                                    <Icon d={ic.check} size={12} color={C.red} />
-                                    Reject
-                                  </button>
-                                )}
-
-                                {/* Shortlist button — shows when applied or reviewed */}
-                                {['pending','reviewed'].includes(app.status) && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={() => updateStatus(app.id, 'shortlisted')}
-                                    style={{ ...btn, height:32, fontSize:'0.75rem',
-                                      background:C.greenLight, color:C.green, border:'none',
-                                      opacity:isUpdating?0.6:1,
-                                      cursor:isUpdating?'not-allowed':'pointer' }}>
-                                    <Icon d={ic.star} size={12} color={C.green} />
-                                    {isUpdating ? 'Shortlisting...' : 'Shortlist'}
-                                  </button>
-                                )}
-
                               </div>
                             </td>
                           </tr>
@@ -585,7 +546,6 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* Profile */}
           {activeTab === 'profile' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="Company Profile">
@@ -626,26 +586,6 @@ const CompanyDashboard = () => {
                       {company.description || 'No description added yet.'}
                     </p>
                   </div>
-                  <div style={{ display:'grid',
-                    gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:12 }}>
-                    {[
-                      { label:'Email',     value:company.email || user?.email },
-                      { label:'Website',   value:company.website || 'Not provided' },
-                      { label:'Founded',   value:company.founded || 'Not provided' },
-                      { label:'Employees', value:company.totalEmployees || 'Not specified' },
-                    ].map((f,i) => (
-                      <div key={i} style={{ padding:'0.875rem 1rem', background:C.white,
-                        border:`1px solid ${C.grey100}`, borderRadius:10 }}>
-                        <div style={{ fontSize:'0.7rem', fontWeight:700, color:C.grey400,
-                          textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>
-                          {f.label}
-                        </div>
-                        <div style={{ fontSize:'0.875rem', fontWeight:600, color:C.grey900 }}>
-                          {f.value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
@@ -655,7 +595,7 @@ const CompanyDashboard = () => {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
         button:hover:not(:disabled) { filter: brightness(0.92) !important; }
         a:hover { filter: brightness(0.88) !important; }
@@ -666,7 +606,7 @@ const CompanyDashboard = () => {
 
 const PageShell = ({ children }) => (
   <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column',
-    background:'#F8F9FB', fontFamily:"'Poppins',sans-serif" }}>
+    background:'#F8F9FB', fontFamily:"'Inter', sans-serif" }}>
     <Navbar />
     <main style={{ flex:1 }}>{children}</main>
     <Footer />
