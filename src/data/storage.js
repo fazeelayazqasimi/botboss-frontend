@@ -29,11 +29,16 @@ const patch = async (url, data) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || "Patch failed");
+  }
   return res.json();
 };
 
 const del = async (url) => {
   const res = await fetch(`${API}${url}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Delete failed");
   return res.json();
 };
 
@@ -153,7 +158,40 @@ export const saveApplication = async (formData) => {
 };
 
 export const updateApplicationStatus = async (appId, status) => {
-  return patch(`/applications/${appId}/status`, { status });
+  try {
+    console.log(`📤 Updating application ${appId} to status: ${status}`);
+    
+    const response = await fetch(`${API}/applications/${appId}/status`, {
+      method: "PATCH",
+      headers: { 
+        "Content-Type": "application/json" 
+      },
+      body: JSON.stringify({ status: status })
+    });
+    
+    console.log(`📥 Response status: ${response.status}`);
+    
+    const responseText = await response.text();
+    console.log(`📄 Response body: ${responseText}`);
+    
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${responseText}`);
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = { success: true, message: responseText };
+    }
+    
+    console.log(`✅ Status updated successfully for ${appId}`);
+    return data;
+    
+  } catch (error) {
+    console.error(`❌ Failed to update status for ${appId}:`, error.message);
+    throw error;
+  }
 };
 
 // ==============================================
