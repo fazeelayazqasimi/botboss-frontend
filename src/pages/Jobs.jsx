@@ -309,7 +309,7 @@ const Jobs = () => {
           <div className="jobs-hero-inner">
             <div>
               <p className="jobs-hero-tag">Opportunities</p>
-              <h1 className="jobs-hero-title">Find Your Dream Job</h1>
+              <h1 className="jobs-hero-title">Find Your Dream Job Now !</h1>
               <p className="jobs-hero-sub">Browse verified listings from top companies</p>
             </div>
             <button className="jobs-refresh-btn" onClick={refreshJobs}>
