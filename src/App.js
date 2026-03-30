@@ -14,6 +14,7 @@ import PostJob from './pages/PostJob';
 import Report from './pages/Report';
 import CompanyProfileEdit from './pages/CompanyProfileEdit';
 import MyJobs from './pages/MyJobs';
+import CVViewer from './pages/CVViewer';
 
 function App() {
   const [isConnected, setIsConnected] = useState(false);
@@ -119,6 +120,7 @@ function App() {
         <Route path="/my-applications" element={<MyApplications />} />
         <Route path="/interview/:jobId" element={<Interview />} />
         <Route path="/report/:sessionId" element={<Report />} />
+        <Route path="/company/cv-viewer" element={<CVViewer />} />
       </Routes>
     </BrowserRouter>
   );
