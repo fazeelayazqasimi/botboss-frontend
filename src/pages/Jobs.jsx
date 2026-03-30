@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import JobCard from '../components/JobCard';
+import { getJobs } from '../storage'; // Import API function
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ search: '', location: '', type: '', category: '', salary: '' });
-  const [sortBy, setSortBy] = useState('newest'); // Changed default to 'newest'
+  const [sortBy, setSortBy] = useState('salary-high');
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
 
@@ -22,23 +23,24 @@ const Jobs = () => {
     applyFiltersAndSort(); 
   }, [filters, jobs, sortBy]);
 
-  const loadJobs = () => {
-    const companiesData = JSON.parse(localStorage.getItem('companies') || '[]');
-    const allJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    console.log('All jobs loaded:', allJobs);
-    
-    const realJobs = allJobs.filter(job => {
-      const belongsToCompany = companiesData.some(c => c.id === job.companyId || c.name === job.company || c.email === job.companyEmail);
-      const hasValidCompanyId = job.companyId && job.companyId > 0;
-      return belongsToCompany || hasValidCompanyId;
-    });
-    
-    console.log('Real jobs after filter:', realJobs);
-    setJobs(realJobs);
-    setFilteredJobs(realJobs);
-    setLocations([...new Set(realJobs.map(j => j.location?.split(' ')[0] || ''))].filter(Boolean));
-    setCategories([...new Set(realJobs.map(j => j.category || ''))].filter(Boolean));
-    setLoading(false);
+  const loadJobs = async () => {
+    try {
+      setLoading(true);
+      // ✅ Call backend API
+      const allJobs = await getJobs();
+      console.log('All jobs from API:', allJobs);
+      
+      setJobs(allJobs);
+      setFilteredJobs(allJobs);
+      setLocations([...new Set(allJobs.map(j => j.location?.split(' ')[0] || ''))].filter(Boolean));
+      setCategories([...new Set(allJobs.map(j => j.category || ''))].filter(Boolean));
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+      setJobs([]);
+      setFilteredJobs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const applyFiltersAndSort = () => {
@@ -50,7 +52,7 @@ const Jobs = () => {
     if (filters.search) {
       f = f.filter(j => 
         j.title?.toLowerCase().includes(filters.search.toLowerCase()) || 
-        j.company?.toLowerCase().includes(filters.search.toLowerCase()) || 
+        j.company_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
         j.description?.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
@@ -83,24 +85,7 @@ const Jobs = () => {
     const sorted = [...jobsArray];
     
     switch(sortType) {
-      case 'newest':
-        console.log('Sorting by newest...');
-        return sorted.sort((a, b) => {
-          const dateA = new Date(a.postedDate);
-          const dateB = new Date(b.postedDate);
-          return dateB - dateA;
-        });
-      
-      case 'oldest':
-        console.log('Sorting by oldest...');
-        return sorted.sort((a, b) => {
-          const dateA = new Date(a.postedDate);
-          const dateB = new Date(b.postedDate);
-          return dateA - dateB;
-        });
-      
       case 'salary-high':
-        console.log('Sorting by salary high to low...');
         return sorted.sort((a, b) => {
           const salaryA = getSalaryNumber(a.salary);
           const salaryB = getSalaryNumber(b.salary);
@@ -108,46 +93,32 @@ const Jobs = () => {
         });
       
       case 'salary-low':
-        console.log('Sorting by salary low to high...');
         return sorted.sort((a, b) => {
           const salaryA = getSalaryNumber(a.salary);
           const salaryB = getSalaryNumber(b.salary);
           return salaryA - salaryB;
         });
       
-      case 'relevant':
       default:
-        console.log('Sorting by relevance (newest first)...');
-        return sorted.sort((a, b) => {
-          const dateA = new Date(a.postedDate);
-          const dateB = new Date(b.postedDate);
-          return dateB - dateA;
-        });
+        return sorted;
     }
   };
 
-  // Helper function to extract salary number
   const getSalaryNumber = (salaryString) => {
     if (!salaryString) return 0;
-    // Extract numbers from string like "₹10 LPA", "10-15 LPA", etc.
     const numbers = salaryString.match(/\d+/g);
     if (!numbers) return 0;
-    // If there are multiple numbers (like range), take the first one or average
     if (numbers.length === 1) return parseInt(numbers[0]);
     if (numbers.length >= 2) {
-      // For ranges like "10-15", return the average or middle
       return (parseInt(numbers[0]) + parseInt(numbers[1])) / 2;
     }
     return parseInt(numbers[0]) || 0;
   };
 
   const handleFilterChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
-  const handleSortChange = e => {
-    console.log('Sort changed to:', e.target.value);
-    setSortBy(e.target.value);
-  };
+  const handleSortChange = e => setSortBy(e.target.value);
   const clearFilters = () => setFilters({ search: '', location: '', type: '', category: '', salary: '' });
-  const refreshJobs = () => { setLoading(true); loadJobs(); };
+  const refreshJobs = () => { loadJobs(); };
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
@@ -178,7 +149,6 @@ const Jobs = () => {
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ── HERO ── */
         .jobs-hero {
           background: #1c0b4b;
           padding: 3.5rem 5%;
@@ -217,7 +187,6 @@ const Jobs = () => {
         .jobs-refresh-btn:hover { background: rgba(124,58,237,0.25); border-color: rgba(124,58,237,0.5); }
         .jobs-refresh-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; }
 
-        /* ── LAYOUT ── */
         .jobs-layout {
           max-width: 1300px; margin: 0 auto;
           padding: 2rem 5%;
@@ -227,7 +196,6 @@ const Jobs = () => {
           align-items: start;
         }
 
-        /* ── SIDEBAR ── */
         .jobs-sidebar {
           background: white;
           border: 1.5px solid #f3f4f6;
@@ -262,7 +230,6 @@ const Jobs = () => {
           transition: border-color 0.2s;
         }
         .jobs-filter-input:focus, .jobs-filter-select:focus { border-color: #7c3aed; background: white; }
-        .jobs-filter-input::placeholder { color: #d1d5db; }
         .jobs-clear-btn {
           width: 100%; padding: 0.65rem;
           background: #f5f3ff; border: 1.5px solid #ede9fe;
@@ -273,7 +240,6 @@ const Jobs = () => {
         }
         .jobs-clear-btn:hover { background: #ede9fe; }
 
-        /* ── MAIN ── */
         .jobs-main { display: flex; flex-direction: column; gap: 1.25rem; }
         .jobs-results-bar {
           background: white; border: 1.5px solid #f3f4f6;
@@ -289,14 +255,6 @@ const Jobs = () => {
           border: 1.5px solid #f3f4f6; border-radius: 10px;
           font-family: 'Poppins', sans-serif; font-size: 0.82rem;
           color: #4b5563; background: white; outline: none; cursor: pointer;
-          transition: all 0.2s;
-        }
-        .jobs-sort:hover {
-          border-color: #7c3aed;
-        }
-        .jobs-sort:focus {
-          border-color: #7c3aed;
-          box-shadow: 0 0 0 2px rgba(124,58,237,0.1);
         }
         .jobs-grid {
           display: grid;
@@ -304,7 +262,6 @@ const Jobs = () => {
           gap: 1.25rem;
         }
 
-        /* ── EMPTY ── */
         .jobs-empty {
           background: white; border: 1.5px solid #f3f4f6;
           border-radius: 16px; padding: 4rem 2rem;
@@ -316,16 +273,14 @@ const Jobs = () => {
           display: flex; align-items: center; justify-content: center;
           margin: 0 auto 1.25rem;
         }
-        .jobs-empty-icon svg { width: 28px; height: 28px; stroke: #c4b5fd; fill: none; }
         .jobs-empty h3 { font-size: 1rem; font-weight: 700; color: #1c0b4b; margin-bottom: 0.4rem; }
         .jobs-empty p { font-size: 0.84rem; color: #9ca3af; line-height: 1.6; }
 
-        /* ── LOADING ── */
         .jobs-loading {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; justify-content: center;
           gap: 1rem; padding: 5rem; color: #9ca3af;
-          font-size: 0.9rem; font-family: 'Poppins', sans-serif;
+          font-size: 0.9rem;
         }
         .jobs-spinner {
           width: 36px; height: 36px;
@@ -336,7 +291,6 @@ const Jobs = () => {
         }
         @keyframes jobs-spin { to { transform: rotate(360deg); } }
 
-        /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .jobs-layout { grid-template-columns: 1fr; }
           .jobs-sidebar { position: static; }
@@ -351,7 +305,6 @@ const Jobs = () => {
       <div className="jobs-root">
         <Navbar />
 
-        {/* Hero */}
         <section className="jobs-hero">
           <div className="jobs-hero-inner">
             <div>
@@ -369,10 +322,7 @@ const Jobs = () => {
           </div>
         </section>
 
-        {/* Layout */}
         <div className="jobs-layout">
-
-          {/* Sidebar Filters */}
           <aside className="jobs-sidebar">
             <div className="jobs-sidebar-head">
               <span className="jobs-sidebar-title">Filters</span>
@@ -433,7 +383,6 @@ const Jobs = () => {
             <button className="jobs-clear-btn" onClick={clearFilters}>Clear All Filters</button>
           </aside>
 
-          {/* Main Content */}
           <main className="jobs-main">
             <div className="jobs-results-bar">
               <span className="jobs-count">
