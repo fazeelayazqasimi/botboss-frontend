@@ -119,7 +119,7 @@ const JobDetails = () => {
         setJob(jobData);
         if (userData && userData.type === 'candidate') {
           const applications = await getApplicationsByJob(id);
-          const applied = applications.some(a => a.candidate_id === userData.id);
+          const applied = applications.some(a => a.user_id === userData.id);
           setHasApplied(applied);
         }
       } catch (error) {
