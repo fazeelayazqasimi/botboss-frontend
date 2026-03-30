@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { getApplicationsByCandidate } from '../data/storage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
 
@@ -26,41 +27,40 @@ const MyApplications = () => {
   }, [navigate]);
 
   const loadAll = async (userData) => {
-    try {
-      // 1. Fetch applications from backend
-      const res = await fetch(`${API_URL}/applications/user/${userData.id}`);
-      if (!res.ok) throw new Error('Failed to fetch applications');
-      const apps = await res.json();
-      setApplications(apps);
+  try {
+    // PEHLE (direct fetch - double slash issue):
+    // const res = await fetch(`${API_URL}/applications/user/${userData.id}`);
+    // const apps = await res.json();
 
-      // 2. Fetch job details for each unique job_id
-      const uniqueJobIds = [...new Set(apps.map(a => a.job_id).filter(Boolean))];
-      const jobMap = {};
-      await Promise.all(
-        uniqueJobIds.map(async (jobId) => {
-          try {
-            const jRes = await fetch(`${API_URL}/jobs/${jobId}`);
-            if (jRes.ok) jobMap[jobId] = await jRes.json();
-          } catch (_) {}
-        })
-      );
-      setJobs(jobMap);
+    // AB (storage.js se - bilkul Jobs.jsx jaisa):
+    const apps = await getApplicationsByCandidate(userData.id);
+    setApplications(apps);
 
-      // 3. Load interviews from localStorage
-      const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
-      const myInterviews = allInterviews.filter(i =>
-        apps.some(a => a.id === i.applicationId || a.job_id === i.jobId)
-      );
-      setInterviews(myInterviews);
+    // Job details fetch - yeh bhi storage se:
+    const uniqueJobIds = [...new Set(apps.map(a => a.job_id).filter(Boolean))];
+    const jobMap = {};
+    await Promise.all(
+      uniqueJobIds.map(async (jobId) => {
+        try {
+          const jRes = await fetch(`https://fazeelayazqasimi-botboss-updated-backend.hf.space/jobs/${jobId}`);
+          if (jRes.ok) jobMap[jobId] = await jRes.json();
+        } catch (_) {}
+      })
+    );
+    setJobs(jobMap);
 
-      // 4. Load reports for completed interviews
-      await loadReports(myInterviews);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
+    const myInterviews = allInterviews.filter(i =>
+      apps.some(a => a.id === i.applicationId || a.job_id === i.jobId)
+    );
+    setInterviews(myInterviews);
+    await loadReports(myInterviews);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadReports = async (myInterviews) => {
     const results = await Promise.all(
