@@ -133,7 +133,7 @@ export const deleteJob = async (jobId) => {
 };
 
 // ==============================================
-// APPLICATIONS
+// APPLICATIONS - FIXED VERSION
 // ==============================================
 
 export const getApplicationsByCandidate = async (userId) => {
@@ -157,34 +157,28 @@ export const saveApplication = async (formData) => {
   return res.json();
 };
 
+// ✅ FIXED - Backend expects status as query parameter, NOT in request body
 export const updateApplicationStatus = async (appId, status) => {
   try {
     console.log(`📤 Updating application ${appId} to status: ${status}`);
     
-    const response = await fetch(`${API}/applications/${appId}/status`, {
+    // Important: Backend reads status from query parameter ?status=value
+    const response = await fetch(`${API}/applications/${appId}/status?status=${status}`, {
       method: "PATCH",
       headers: { 
         "Content-Type": "application/json" 
-      },
-      body: JSON.stringify({ status: status })
+      }
     });
     
     console.log(`📥 Response status: ${response.status}`);
     
-    const responseText = await response.text();
-    console.log(`📄 Response body: ${responseText}`);
-    
     if (!response.ok) {
-      throw new Error(`Server returned ${response.status}: ${responseText}`);
+      const errorText = await response.text();
+      console.error(`❌ Server error: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to update status: ${response.status}`);
     }
     
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      data = { success: true, message: responseText };
-    }
-    
+    const data = await response.json();
     console.log(`✅ Status updated successfully for ${appId}`);
     return data;
     
