@@ -54,9 +54,6 @@ const chip = (bg, color, extra = {}) => ({
   whiteSpace:'nowrap', ...extra,
 });
 
-const scoreColor = (n) => n>=80?C.green:n>=60?C.blue:n>=40?C.amber:C.red;
-const scoreBg = (n) => n>=80?C.greenLight:n>=60?C.blueLight:n>=40?C.amberLight:C.redLight;
-
 const STATUS_MAP = {
   pending: 'Applied', reviewed: 'Under Review', shortlisted: 'Shortlisted',
   interview_scheduled: 'Interview Scheduled', interview_completed: 'Interview Completed',
@@ -240,7 +237,6 @@ const CompanyDashboard = () => {
     <PageShell>
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'2rem 1.25rem', fontFamily:font }}>
 
-        {/* HEADER SECTION - WITH CV VIEWER BUTTON */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start',
           flexWrap:'wrap', gap:'1rem', marginBottom:'2rem' }}>
           <div>
@@ -266,7 +262,6 @@ const CompanyDashboard = () => {
               <Icon d={ic.plus} size={14} color={C.white} />
               Post New Job
             </Link>
-            {/* ✅ CV VIEWER BUTTON - Company ko saari CVs dikhane ke liye */}
             <Link to="/company/cv-viewer"
               style={{ ...btn, background:C.grey100, color:C.grey700, border:`1px solid ${C.grey200}` }}>
               <Icon d={ic.fileText} size={14} color={C.grey700} />
@@ -275,7 +270,6 @@ const CompanyDashboard = () => {
           </div>
         </div>
 
-        {/* STATS CARDS */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',
           gap:12, marginBottom:'1.75rem' }}>
           {STATS.map((s,i) => (
@@ -295,7 +289,6 @@ const CompanyDashboard = () => {
           ))}
         </div>
 
-        {/* TABS */}
         <div style={{ display:'flex', gap:4, marginBottom:'1.25rem',
           borderBottom:`1px solid ${C.grey200}`, overflowX:'auto' }}>
           {TABS.map(t => {
@@ -316,10 +309,8 @@ const CompanyDashboard = () => {
           })}
         </div>
 
-        {/* TAB CONTENT */}
         <div style={card}>
 
-          {/* OVERVIEW TAB */}
           {activeTab === 'overview' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="Recent Applications">
@@ -337,7 +328,8 @@ const CompanyDashboard = () => {
                         {['Candidate','Job','Applied','Status','Action'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
-                      </thead>
+                      </tr>
+                    </thead>
                     <tbody>
                       {applications.slice(0,5).map(app => {
                         const [sBg, sCol] = statusStyle(app.status);
@@ -375,7 +367,6 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* JOBS TAB */}
           {activeTab === 'jobs' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="My Jobs">
@@ -429,7 +420,6 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* APPLICATIONS TAB */}
           {activeTab === 'applications' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="All Applications">
@@ -470,7 +460,8 @@ const CompanyDashboard = () => {
                         {['Candidate','Email','Job','Applied','CV Score','Status','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
-                      </thead>
+                      </tr>
+                    </thead>
                     <tbody>
                       {filtered.map(app => {
                         const [sBg, sCol] = statusStyle(app.status);
@@ -556,7 +547,6 @@ const CompanyDashboard = () => {
             </div>
           )}
 
-          {/* PROFILE TAB */}
           {activeTab === 'profile' && (
             <div style={{ padding:'1.5rem' }}>
               <SectionHead title="Company Profile">
