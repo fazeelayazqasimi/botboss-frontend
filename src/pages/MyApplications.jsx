@@ -3,76 +3,58 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
+const API_URL = process.env.REACT_APP_API_URL || 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
+
 const MyApplications = () => {
   const [user, setUser] = useState(null);
-  const [candidate, setCandidate] = useState(null);
   const [applications, setApplications] = useState([]);
+  const [jobs, setJobs] = useState({});
   const [interviews, setInterviews] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const navigate = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'candidate') { 
-      navigate('/login'); 
-      return; 
+    if (!userData || userData.type !== 'candidate') {
+      navigate('/login');
+      return;
     }
     setUser(userData);
-    loadCandidateData(userData);
+    loadAll(userData);
   }, [navigate]);
 
-  const loadCandidateData = async (userData) => {
+  const loadAll = async (userData) => {
     try {
-      const candidates = JSON.parse(localStorage.getItem('candidates') || '[]');
-      const candidateProfile = candidates.find(c =>
-        c.userId === userData.id || c.email === userData.email || c.name === userData.name
+      // 1. Fetch applications from backend
+      const res = await fetch(`${API_URL}/applications/user/${userData.id}`);
+      if (!res.ok) throw new Error('Failed to fetch applications');
+      const apps = await res.json();
+      setApplications(apps);
+
+      // 2. Fetch job details for each unique job_id
+      const uniqueJobIds = [...new Set(apps.map(a => a.job_id).filter(Boolean))];
+      const jobMap = {};
+      await Promise.all(
+        uniqueJobIds.map(async (jobId) => {
+          try {
+            const jRes = await fetch(`${API_URL}/jobs/${jobId}`);
+            if (jRes.ok) jobMap[jobId] = await jRes.json();
+          } catch (_) {}
+        })
       );
-      setCandidate(candidateProfile);
-      
-      const allApplications = JSON.parse(localStorage.getItem('applications') || '[]');
-      
-      // Filter applications for this candidate
-      let myApplications = allApplications.filter(app =>
-        app.candidateId === candidateProfile?.id ||
-        app.candidateName === userData.name ||
-        app.candidateEmail === userData.email
-      );
-      
-      // ===== AUTO-SHORTLIST: CV Score >= 50% =====
-      // Check if any applications need auto-shortlisting
-      let needsUpdate = false;
-      const updatedApplications = myApplications.map(app => {
-        // If CV score >= 50 and status is 'Applied', auto-shortlist
-        if (app.cvScore >= 50 && app.status === 'Applied') {
-          needsUpdate = true;
-          console.log(`Auto-shortlisting ${app.jobTitle} (CV Score: ${app.cvScore}%)`);
-          return { ...app, status: 'Shortlisted' };
-        }
-        return app;
-      });
-      
-      // Update localStorage if changes were made
-      if (needsUpdate) {
-        const allApps = JSON.parse(localStorage.getItem('applications') || '[]');
-        const updatedAllApps = allApps.map(app => {
-          const updated = updatedApplications.find(u => u.id === app.id);
-          return updated || app;
-        });
-        localStorage.setItem('applications', JSON.stringify(updatedAllApps));
-        myApplications = updatedApplications;
-      }
-      
-      setApplications(myApplications);
-      
+      setJobs(jobMap);
+
+      // 3. Load interviews from localStorage
       const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
-      const myInterviews = allInterviews.filter(i => myApplications.some(a => a.id === i.applicationId));
+      const myInterviews = allInterviews.filter(i =>
+        apps.some(a => a.id === i.applicationId || a.job_id === i.jobId)
+      );
       setInterviews(myInterviews);
-      
-      await loadReportsFromBackend(myInterviews);
+
+      // 4. Load reports for completed interviews
+      await loadReports(myInterviews);
     } catch (err) {
       console.error(err);
     } finally {
@@ -80,7 +62,7 @@ const MyApplications = () => {
     }
   };
 
-  const loadReportsFromBackend = async (myInterviews) => {
+  const loadReports = async (myInterviews) => {
     const results = await Promise.all(
       myInterviews.filter(i => i.status === 'Completed').map(async (iv) => {
         try {
@@ -93,79 +75,93 @@ const MyApplications = () => {
     setReports(results.filter(Boolean));
   };
 
+  // ── Status config ──────────────────────────────────────────────
   const STATUS_CFG = {
-    'Applied':             { bg: '#fff7ed', color: '#ea580c', border: '#fed7aa', bar: '#f97316' },
-    'Under Review':        { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', bar: '#3b82f6' },
-    'Shortlisted':         { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', bar: '#22c55e' },
-    'Interview Scheduled': { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', bar: '#8b5cf6' },
-    'Interview Completed': { bg: '#fdf4ff', color: '#a21caf', border: '#f0abfc', bar: '#c026d3' },
-    'Rejected':            { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', bar: '#ef4444' },
-    'Hired':               { bg: '#f0fdf4', color: '#15803d', border: '#86efac', bar: '#22c55e' },
+    pending:              { bg: '#fff7ed', color: '#ea580c', border: '#fed7aa', bar: '#f97316', label: 'Applied' },
+    reviewed:             { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', bar: '#3b82f6', label: 'Under Review' },
+    shortlisted:          { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', bar: '#22c55e', label: 'Shortlisted' },
+    interview_scheduled:  { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', bar: '#8b5cf6', label: 'Interview Scheduled' },
+    interview_completed:  { bg: '#fdf4ff', color: '#a21caf', border: '#f0abfc', bar: '#c026d3', label: 'Interview Completed' },
+    rejected:             { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', bar: '#ef4444', label: 'Rejected' },
+    hired:                { bg: '#f0fdf4', color: '#15803d', border: '#86efac', bar: '#22c55e', label: 'Hired' },
   };
-  const cfg = (s) => STATUS_CFG[s] || { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', bar: '#9ca3af' };
+  const cfg = (s) => STATUS_CFG[s] || { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb', bar: '#9ca3af', label: s || 'Applied' };
 
   const STATUS_ICONS = {
-    'Applied':             <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-    'Under Review':        <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-    'Shortlisted':         <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-    'Interview Scheduled': <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    'Interview Completed': <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-    'Rejected':            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
-    'Hired':               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    pending:             <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    reviewed:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    shortlisted:         <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    interview_scheduled: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    interview_completed: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+    rejected:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+    hired:               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   };
 
-  const getInterview = (appId) => interviews.find(i => i.applicationId === appId);
-  const getReport = (ivId) => reports.find(r => r.interviewId === ivId)?.report;
+  // ── Helpers ────────────────────────────────────────────────────
+  const getInterview = (appId, jobId) =>
+    interviews.find(i => i.applicationId === appId || i.jobId === jobId);
+  const getReport = (ivId) =>
+    reports.find(r => r.interviewId === ivId)?.report;
+  const isInterviewCompleted = (app) => {
+    const iv = getInterview(app.id, app.job_id);
+    return iv?.status === 'Completed' || app.status === 'interview_completed';
+  };
 
+  // ── Filter tabs ────────────────────────────────────────────────
   const FILTER_TABS = [
-    { key: 'all', label: 'All' },
-    { key: 'applied', label: 'Applied' },
-    { key: 'under-review', label: 'Review' },
-    { key: 'shortlisted', label: 'Shortlisted' },
-    { key: 'interview-scheduled', label: 'Scheduled' },
-    { key: 'interview-completed', label: 'Completed' },
-    { key: 'rejected', label: 'Rejected' },
-    { key: 'hired', label: 'Hired' },
+    { key: 'all',                 label: 'All' },
+    { key: 'pending',             label: 'Applied' },
+    { key: 'reviewed',            label: 'Under Review' },
+    { key: 'shortlisted',         label: 'Shortlisted' },
+    { key: 'interview_scheduled', label: 'Scheduled' },
+    { key: 'interview_completed', label: 'Completed' },
+    { key: 'rejected',            label: 'Rejected' },
+    { key: 'hired',               label: 'Hired' },
   ];
 
   const tabCount = (key) => {
     if (key === 'all') return applications.length;
-    const map = { 
-      'applied':'Applied',
-      'under-review':'Under Review',
-      'shortlisted':'Shortlisted',
-      'interview-scheduled':'Interview Scheduled',
-      'interview-completed':'Interview Completed',
-      'rejected':'Rejected',
-      'hired':'Hired' 
-    };
-    return applications.filter(a => a.status === map[key]).length;
+    return applications.filter(a => a.status === key).length;
   };
 
   const filtered = activeFilter === 'all'
     ? applications
-    : applications.filter(a => a.status.toLowerCase().replace(/ /g, '-') === activeFilter);
+    : applications.filter(a => a.status === activeFilter);
 
+  // ── Stats ──────────────────────────────────────────────────────
   const STATS = [
-    { label: 'Total',       val: applications.length,                                                            color: '#7c3aed', bg: '#f5f3ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
-    { label: 'Active',      val: applications.filter(a => !['Rejected','Hired','Interview Completed'].includes(a.status)).length, color: '#2563eb', bg: '#eff6ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
-    { label: 'Shortlisted', val: applications.filter(a => a.status === 'Shortlisted').length,                   color: '#16a34a', bg: '#f0fdf4', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
-    { label: 'Interviews',  val: interviews.length,                                                              color: '#7c3aed', bg: '#f5f3ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
-    { label: 'Completed',   val: applications.filter(a => a.status === 'Interview Completed').length,           color: '#a21caf', bg: '#fdf4ff', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg> },
-    { label: 'Offers',      val: applications.filter(a => a.status === 'Hired').length,                        color: '#15803d', bg: '#f0fdf4', icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+    {
+      label: 'Total', val: applications.length,
+      color: '#7c3aed', bg: '#f5f3ff',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    },
+    {
+      label: 'Active',
+      val: applications.filter(a => !['rejected','hired','interview_completed'].includes(a.status)).length,
+      color: '#2563eb', bg: '#eff6ff',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    },
+    {
+      label: 'Shortlisted', val: applications.filter(a => a.status === 'shortlisted').length,
+      color: '#16a34a', bg: '#f0fdf4',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    },
+    {
+      label: 'Interviews', val: interviews.length,
+      color: '#7c3aed', bg: '#f5f3ff',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    },
+    {
+      label: 'Completed', val: applications.filter(a => a.status === 'interview_completed').length,
+      color: '#a21caf', bg: '#fdf4ff',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+    },
+    {
+      label: 'Offers', val: applications.filter(a => a.status === 'hired').length,
+      color: '#15803d', bg: '#f0fdf4',
+      icon: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    },
   ];
-
-  // 🔥 Helper function to check if interview is completed
-  const isInterviewCompleted = (app) => {
-    const interview = getInterview(app.id);
-    return interview?.status === 'Completed' || app.status === 'Interview Completed';
-  };
-
-  // 🔥 Helper function to check if interview is in progress
-  const isInterviewInProgress = (app) => {
-    const interview = getInterview(app.id);
-    return interview?.status === 'Scheduled' || app.status === 'Interview Scheduled';
-  };
 
   /* ─────────── RENDER ─────────── */
   return (
@@ -182,7 +178,7 @@ const MyApplications = () => {
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ──────────── LOADING ──────────── */
+        /* ── LOADER ── */
         .ma-loader {
           min-height: 60vh;
           display: flex; flex-direction: column;
@@ -196,7 +192,7 @@ const MyApplications = () => {
         }
         @keyframes ma-spin { to { transform: rotate(360deg); } }
 
-        /* ──────────── HERO ──────────── */
+        /* ── HERO ── */
         .ma-hero {
           background: #1c0b4b;
           padding: 2.75rem 5% 2.25rem;
@@ -220,16 +216,18 @@ const MyApplications = () => {
         .ma-hero-title span { color:#a78bfa; font-weight:400; }
         .ma-hero-sub { font-size:.875rem; color:#9ca3af; }
 
-        /* ──────────── MAIN ──────────── */
+        /* ── MAIN ── */
         .ma-main { max-width:1300px; margin:0 auto; padding:1.75rem 5%; }
 
-        /* ──────────── STATS ──────────── */
+        /* ── STATS ── */
         .ma-stats {
           display: grid;
           grid-template-columns: repeat(6,1fr);
           gap:.875rem;
           margin-bottom:1.75rem;
         }
+        @media(max-width:1000px){ .ma-stats{ grid-template-columns:repeat(3,1fr); } }
+        @media(max-width:560px){ .ma-stats{ grid-template-columns:repeat(2,1fr); } }
         .ma-stat {
           background:white; border:1.5px solid #f3f4f6;
           border-radius:14px; padding:1.1rem 1rem;
@@ -245,7 +243,7 @@ const MyApplications = () => {
         .ma-stat-val { font-size:1.55rem; font-weight:800; color:#1c0b4b; letter-spacing:-.03em; line-height:1; }
         .ma-stat-lbl { font-size:.7rem; color:#9ca3af; font-weight:500; }
 
-        /* ──────────── FILTER TABS ──────────── */
+        /* ── FILTER TABS ── */
         .ma-tabs {
           display:flex; gap:.375rem;
           overflow-x:auto; padding-bottom:.25rem;
@@ -269,19 +267,17 @@ const MyApplications = () => {
         }
         .ma-tab.on .ma-tab-n { background:rgba(255,255,255,.25); }
 
-        /* ──────────── APPLICATION CARD ──────────── */
+        /* ── APPLICATION LIST ── */
         .ma-list { display:flex; flex-direction:column; gap:1.1rem; }
 
+        /* ── CARD ── */
         .ma-card {
           background:white; border:1.5px solid #f3f4f6;
           border-radius:18px; overflow:hidden;
           transition:all .22s;
         }
         .ma-card:hover { border-color:#ddd6fe; box-shadow:0 6px 24px rgba(124,58,237,.08); }
-
-        /* top colour bar */
         .ma-card-bar { height:3.5px; }
-
         .ma-card-body { padding:1.4rem 1.5rem; }
 
         /* card header */
@@ -290,12 +286,16 @@ const MyApplications = () => {
           align-items:flex-start; gap:.875rem; margin-bottom:.9rem;
         }
         .ma-ch-left { flex:1; min-width:0; }
+        .ma-job-title {
+          font-size:.975rem; font-weight:700; color:#1c0b4b;
+          display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+          margin-bottom:.2rem;
+        }
         .ma-job-link {
           font-size:.975rem; font-weight:700; color:#1c0b4b;
           text-decoration:none; display:block;
           overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-          margin-bottom:.2rem;
-          transition:color .18s;
+          margin-bottom:.2rem; transition:color .18s;
         }
         .ma-job-link:hover { color:#7c3aed; }
         .ma-company { font-size:.8rem; font-weight:600; color:#7c3aed; }
@@ -308,8 +308,16 @@ const MyApplications = () => {
           border:1.5px solid; white-space:nowrap; flex-shrink:0;
         }
         .ma-badge svg { width:11px; height:11px; stroke:currentColor; fill:none; flex-shrink:0; }
+        .ma-auto-badge {
+          font-size:0.65rem; background:rgba(22,163,74,.1);
+          color:#16a34a; padding:2px 6px; border-radius:12px; margin-left:4px;
+        }
+        .ma-done-badge {
+          font-size:0.65rem; background:rgba(162,28,175,.1);
+          color:#a21caf; padding:2px 6px; border-radius:12px; margin-left:4px;
+        }
 
-        /* meta chips row */
+        /* meta chips */
         .ma-meta { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.9rem; }
         .ma-chip {
           display:inline-flex; align-items:center; gap:.28rem;
@@ -319,24 +327,18 @@ const MyApplications = () => {
         }
         .ma-chip svg { width:11px; height:11px; stroke:#9ca3af; fill:none; flex-shrink:0; }
 
-        /* score bar - CV SCORE (REMOVED PERCENTAGE) */
-        .ma-scorebar { margin-bottom:.9rem; }
-        .ma-scorebar-top {
-          display:flex; justify-content:space-between;
-          font-size:.7rem; font-weight:600; color:#6b7280; margin-bottom:.28rem;
+        /* cover letter */
+        .ma-cover {
+          background:#f8f7ff; border:1.5px solid #ede9fe;
+          border-radius:12px; padding:.9rem 1rem; margin-bottom:.9rem;
         }
-        .ma-scorebar-bg { height:5px; background:#f3f4f6; border-radius:3px; overflow:hidden; }
-        .ma-scorebar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
-
-        /* CV Score Badge - WITHOUT PERCENTAGE */
-        .ma-cv-score-badge {
-          display:inline-flex; align-items:center; gap:.35rem;
-          padding:.25rem .75rem; border-radius:20px;
-          font-size:.75rem; font-weight:600;
-          margin-left:.5rem;
+        .ma-cover-label {
+          font-size:.68rem; font-weight:700; color:#7c3aed;
+          text-transform:uppercase; letter-spacing:.08em; margin-bottom:.35rem;
         }
+        .ma-cover-text { font-size:.8rem; color:#6b7280; line-height:1.6; }
 
-        /* ──────────── INTERVIEW BLOCK ──────────── */
+        /* interview block */
         .ma-iv {
           background:#f8f7ff; border:1.5px solid #ede9fe;
           border-radius:14px; padding:1rem 1.1rem; margin-bottom:.9rem;
@@ -366,7 +368,12 @@ const MyApplications = () => {
           background:white; border:1px solid #f3f4f6;
           border-radius:10px; padding:.8rem 1rem; margin-top:.75rem;
         }
+        .ma-report-title {
+          font-size:.72rem; font-weight:700; color:#7c3aed;
+          text-transform:uppercase; letter-spacing:.06em; margin-bottom:.6rem;
+        }
         .ma-rscores { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; }
+        @media(max-width:500px){ .ma-rscores{ grid-template-columns:repeat(2,1fr); } }
         .ma-rs {
           text-align:center; background:#f9fafb;
           border-radius:8px; padding:.45rem .25rem;
@@ -374,8 +381,8 @@ const MyApplications = () => {
         .ma-rs-val { font-size:.95rem; font-weight:800; color:#1c0b4b; letter-spacing:-.02em; }
         .ma-rs-lbl { font-size:.6rem; color:#9ca3af; font-weight:500; margin-top:.1rem; }
 
-        /* ──────────── ACTION BUTTONS ──────────── */
-        .ma-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
+        /* action buttons */
+        .ma-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem; }
         .ma-btn {
           display:inline-flex; align-items:center; gap:.3rem;
           font-family:'Poppins',sans-serif;
@@ -385,24 +392,17 @@ const MyApplications = () => {
           transition:all .18s; white-space:nowrap;
         }
         .ma-btn svg { width:12px; height:12px; stroke:currentColor; fill:none; flex-shrink:0; }
-        .ma-btn-primary   { background:#7c3aed; color:white; }
+        .ma-btn-primary  { background:#7c3aed; color:white; }
         .ma-btn-primary:hover { background:#6d28d9; }
-        .ma-btn-green     { background:#16a34a; color:white; }
+        .ma-btn-green    { background:#16a34a; color:white; }
         .ma-btn-green:hover { background:#15803d; }
-        .ma-btn-orange    { background:#ea580c; color:white; }
-        .ma-btn-orange:hover { background:#c2410c; }
-        .ma-btn-purple    { background:#a21caf; color:white; }
+        .ma-btn-purple   { background:#a21caf; color:white; }
         .ma-btn-purple:hover { background:#86198f; }
-        .ma-btn-outline   { background:white; color:#7c3aed; border:1.5px solid #ede9fe; }
+        .ma-btn-outline  { background:white; color:#7c3aed; border:1.5px solid #ede9fe; }
         .ma-btn-outline:hover { background:#f5f3ff; border-color:#7c3aed; }
-        .ma-btn-disabled  { background:#d1d5db; color:#6b7280; cursor:not-allowed; opacity:0.7; }
+        .ma-btn-disabled { background:#c4b5fd; color:white; cursor:not-allowed; opacity:.7; }
 
-        /* Interview button */
-        .ma-btn-interview { background:#7c3aed; color:white; }
-        .ma-btn-interview:hover { background:#6d28d9; }
-        .ma-btn-interview-disabled { background:#c4b5fd; color:white; cursor:not-allowed; opacity:0.7; }
-
-        /* ──────────── EMPTY STATE ──────────── */
+        /* empty state */
         .ma-empty {
           background:white; border:1.5px solid #f3f4f6;
           border-radius:20px; padding:4rem 2rem; text-align:center;
@@ -424,32 +424,6 @@ const MyApplications = () => {
         }
         .ma-browse:hover { background:#6d28d9; transform:translateY(-1px); box-shadow:0 8px 20px rgba(124,58,237,.3); }
         .ma-browse svg { width:14px; height:14px; stroke:currentColor; fill:none; }
-
-        /* CV Score Info */
-        .ma-cv-info {
-          display:flex; align-items:center; gap:.5rem;
-          margin-bottom:.5rem; font-size:.75rem;
-        }
-        
-        /* Auto-shortlist badge */
-        .ma-auto-badge {
-          font-size:0.65rem;
-          background:rgba(22, 163, 74, 0.1);
-          color:#16a34a;
-          padding:2px 6px;
-          border-radius:12px;
-          margin-left:4px;
-        }
-
-        /* Completed interview badge */
-        .ma-completed-badge {
-          font-size:0.65rem;
-          background:rgba(162, 28, 175, 0.1);
-          color:#a21caf;
-          padding:2px 6px;
-          border-radius:12px;
-          margin-left:4px;
-        }
       `}</style>
 
       <div className="ma-root">
@@ -508,121 +482,140 @@ const MyApplications = () => {
                 <div className="ma-list">
                   {filtered.map(app => {
                     const sc = cfg(app.status);
-                    const iv = getInterview(app.id);
+                    const job = jobs[app.job_id];
+                    const iv = getInterview(app.id, app.job_id);
                     const rp = iv ? getReport(iv.id) : null;
-                    
-                    // Check if this was auto-shortlisted (CV >= 50 and status changed)
-                    const isAutoShortlisted = app.cvScore >= 50 && app.status === 'Shortlisted';
-                    
-                    // 🔥 Check if interview is completed
                     const completed = isInterviewCompleted(app);
-                    const inProgress = isInterviewInProgress(app);
 
                     return (
                       <div key={app.id} className="ma-card">
                         <div className="ma-card-bar" style={{ background: sc.bar }} />
 
                         <div className="ma-card-body">
-                          {/* Header */}
+
+                          {/* ── Card Header ── */}
                           <div className="ma-ch">
                             <div className="ma-ch-left">
-                              <Link to={`/job/${app.jobId}`} className="ma-job-link">{app.jobTitle}</Link>
-                              <div className="ma-company">{app.company}</div>
+                              {job
+                                ? <Link to={`/job/${app.job_id}`} className="ma-job-link">{job.title}</Link>
+                                : <span className="ma-job-title">Job Application</span>
+                              }
+                              <div className="ma-company">
+                                {job?.company_name || '—'}
+                              </div>
                             </div>
                             <span className="ma-badge" style={{ background: sc.bg, color: sc.color, borderColor: sc.border }}>
                               {STATUS_ICONS[app.status]}
-                              {app.status}
-                              {isAutoShortlisted && <span className="ma-auto-badge">Auto</span>}
-                              {completed && <span className="ma-completed-badge">✓ Done</span>}
+                              {sc.label}
+                              {app.status === 'shortlisted' && <span className="ma-auto-badge">⭐</span>}
+                              {completed && <span className="ma-done-badge">✓ Done</span>}
                             </span>
                           </div>
 
-                          {/* Meta with CV Score - WITHOUT PERCENTAGE */}
+                          {/* ── Meta Chips ── */}
                           <div className="ma-meta">
                             <span className="ma-chip">
-                              <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                              {new Date(app.appliedDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                              <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                              Applied: {new Date(app.applied_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
-                            
-                            {/* 🔥 UPDATED: CV Score Badge - Without percentage display */}
-                            {app.cvScore !== undefined && (
-                              <span 
-                                className="ma-chip" 
-                                style={{ 
-                                  background: app.cvScore >= 50 ? '#f0fdf4' : '#fef2f2',
-                                  borderColor: app.cvScore >= 50 ? '#bbf7d0' : '#fecaca',
-                                  color: app.cvScore >= 50 ? '#16a34a' : '#dc2626'
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                  <polyline points="14 2 14 8 20 8"/>
-                                </svg>
-                                CV {app.cvScore >= 50 ? '✅' : '📄'}
-                              </span>
-                            )}
-                            
-                            {app.score && (
+                            {job?.location && (
                               <span className="ma-chip">
-                                <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                                Score: {app.score}%
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="11" r="3"/></svg>
+                                {job.location}
                               </span>
                             )}
+                            {job?.type && (
+                              <span className="ma-chip">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+                                {job.type}
+                              </span>
+                            )}
+                            {job?.salary && (
+                              <span className="ma-chip">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                                {job.salary}
+                              </span>
+                            )}
+                            {job?.experience && (
+                              <span className="ma-chip">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                {job.experience}
+                              </span>
+                            )}
+                            {app.resume_path && (
+                              <span className="ma-chip" style={{ background:'#f0fdf4', borderColor:'#bbf7d0', color:'#16a34a' }}>
+                                <svg viewBox="0 0 24 24" strokeWidth="2" stroke="#16a34a"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                CV Submitted ✓
+                              </span>
+                            )}
+                            <span className="ma-chip">
+                              <svg viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              ID: {app.id?.slice(0, 8)}…
+                            </span>
                           </div>
 
-                          {/* 🔥 UPDATED: CV Score bar - Without percentage text */}
-                          {app.cvScore !== undefined && (
-                            <div className="ma-scorebar">
-                              <div className="ma-scorebar-top">
-                                <span>CV Match</span>
-                                {/* REMOVED percentage text */}
-                              </div>
-                              <div className="ma-scorebar-bg">
-                                <div 
-                                  className="ma-scorebar-fill" 
-                                  style={{ 
-                                    width: `${app.cvScore}%`, 
-                                    background: app.cvScore >= 50 ? '#22c55e' : '#ef4444' 
-                                  }} 
-                                />
+                          {/* ── Cover Letter ── */}
+                          {app.cover_letter && app.cover_letter.trim() && (
+                            <div className="ma-cover">
+                              <div className="ma-cover-label">Cover Letter</div>
+                              <div className="ma-cover-text">
+                                {app.cover_letter.length > 220
+                                  ? app.cover_letter.slice(0, 220) + '…'
+                                  : app.cover_letter}
                               </div>
                             </div>
                           )}
 
-                          {/* Interview block */}
+                          {/* ── Interview Block ── */}
                           {iv && (
                             <div className="ma-iv">
                               <div className="ma-iv-head">
                                 <div className="ma-iv-title">
-                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                                   Interview Details
                                 </div>
                                 <span className="ma-iv-status" style={{
-                                  background: iv.status === 'Completed' ? '#f0fdf4' : '#fff7ed',
-                                  color:      iv.status === 'Completed' ? '#16a34a' : '#ea580c',
-                                  borderColor:iv.status === 'Completed' ? '#bbf7d0' : '#fed7aa',
+                                  background:  iv.status === 'Completed' ? '#f0fdf4' : '#fff7ed',
+                                  color:       iv.status === 'Completed' ? '#16a34a' : '#ea580c',
+                                  borderColor: iv.status === 'Completed' ? '#bbf7d0' : '#fed7aa',
                                 }}>
                                   {iv.status}
                                 </span>
                               </div>
                               <div className="ma-iv-meta">
-                                <span className="ma-iv-item">
-                                  <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                  {new Date(iv.scheduledDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
-                                </span>
-                                <span className="ma-iv-item">
-                                  <svg viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                  {new Date(iv.scheduledDate).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
-                                </span>
+                                {iv.scheduledDate && (
+                                  <>
+                                    <span className="ma-iv-item">
+                                      <svg viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                      {new Date(iv.scheduledDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                                    </span>
+                                    <span className="ma-iv-item">
+                                      <svg viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                      {new Date(iv.scheduledDate).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+                                    </span>
+                                  </>
+                                )}
+                                {iv.type && (
+                                  <span className="ma-iv-item">
+                                    <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                                    {iv.type}
+                                  </span>
+                                )}
                               </div>
 
-                              {/* Report scores */}
+                              {/* ── Report Scores ── */}
                               {rp && (
                                 <div className="ma-report">
+                                  <div className="ma-report-title">Interview Report</div>
                                   <div className="ma-rscores">
-                                    {[['Overall', rp.overall_score],['Eye Contact', rp.eye_contact_score],['Confidence', rp.confidence_score],['Clarity', rp.clarity_score]].map(([lbl, val], i) => (
+                                    {[
+                                      ['Overall',     rp.overall_score],
+                                      ['Eye Contact', rp.eye_contact_score],
+                                      ['Confidence',  rp.confidence_score],
+                                      ['Clarity',     rp.clarity_score],
+                                    ].map(([lbl, val], i) => (
                                       <div key={i} className="ma-rs">
-                                        <div className="ma-rs-val">{val}%</div>
+                                        <div className="ma-rs-val">{val ?? '—'}%</div>
                                         <div className="ma-rs-lbl">{lbl}</div>
                                       </div>
                                     ))}
@@ -632,59 +625,71 @@ const MyApplications = () => {
                             </div>
                           )}
 
-                          {/* 🔥 UPDATED: Action buttons with disabled after completion */}
+                          {/* ── Action Buttons ── */}
                           <div className="ma-actions">
-                            {/* Case 1: Show Interview button for Shortlisted OR Scheduled status - but disabled if completed */}
-                            {(app.status === 'Shortlisted' || app.status === 'Interview Scheduled') && (
+
+                            {/* Give Interview — Shortlisted */}
+                            {app.status === 'shortlisted' && (
                               completed ? (
-                                <button 
-                                  className="ma-btn ma-btn-interview-disabled"
-                                  disabled
-                                  title="Interview already completed"
-                                >
+                                <button className="ma-btn ma-btn-disabled" disabled>
                                   <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
                                   Interview Completed
                                 </button>
                               ) : (
-                                <Link 
-                                  to={`/interview/${app.jobId}`} 
-                                  state={{ applicationId: app.id, jobTitle: app.jobTitle }} 
-                                  className="ma-btn ma-btn-interview"
+                                <Link
+                                  to={`/interview/${app.job_id}`}
+                                  state={{ applicationId: app.id, jobTitle: job?.title }}
+                                  className="ma-btn ma-btn-primary"
                                 >
                                   <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                                  {app.status === 'Interview Scheduled' ? 'Join Interview' : 'Give Interview'}
+                                  Give Interview
                                 </Link>
                               )
                             )}
 
-                            {/* CV eligible info (when not shortlisted/scheduled) - without percentage */}
-                            {app.cvScore >= 50 && app.status !== 'Shortlisted' && app.status !== 'Interview Scheduled' && app.status !== 'Interview Completed' && (
-                              <div className="ma-cv-info">
-                                <span style={{ color: '#16a34a' }}>✅ CV eligible</span>
-                              </div>
+                            {/* Join Interview — Interview Scheduled */}
+                            {app.status === 'interview_scheduled' && (
+                              completed ? (
+                                <button className="ma-btn ma-btn-disabled" disabled>
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                  Interview Completed
+                                </button>
+                              ) : (
+                                <Link
+                                  to={`/interview/${app.job_id}`}
+                                  state={{ applicationId: app.id, jobTitle: job?.title }}
+                                  className="ma-btn ma-btn-green"
+                                >
+                                  <svg viewBox="0 0 24 24" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                  Join Interview
+                                </Link>
+                              )
                             )}
 
-                            {/* Report available */}
-                            {rp && (
-                              <Link to={`/report/${iv?.id || app.sessionId}`} className="ma-btn ma-btn-purple">
+                            {/* View Full Report */}
+                            {rp && iv && (
+                              <Link to={`/report/${iv.id}`} className="ma-btn ma-btn-purple">
                                 <svg viewBox="0 0 24 24" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                                 View Full Report
                               </Link>
                             )}
 
-                            {/* Always show View Job button */}
-                            <Link to={`/job/${app.jobId}`} className="ma-btn ma-btn-outline">
-                              <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                              View Job
-                            </Link>
+                            {/* View Job */}
+                            {job && (
+                              <Link to={`/job/${app.job_id}`} className="ma-btn ma-btn-outline">
+                                <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                View Job
+                              </Link>
+                            )}
                           </div>
+
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                /* Empty state */
+                /* ── Empty State ── */
                 <div className="ma-empty">
                   <div className="ma-empty-icon">
                     <svg viewBox="0 0 24 24" strokeWidth="1.5">
@@ -696,7 +701,7 @@ const MyApplications = () => {
                   <p>
                     {activeFilter === 'all'
                       ? "You haven't applied to any jobs yet. Start exploring and find your dream job!"
-                      : `No applications with status "${activeFilter.replace(/-/g,' ')}" found.`}
+                      : `No applications with "${FILTER_TABS.find(t => t.key === activeFilter)?.label}" status found.`}
                   </p>
                   <Link to="/jobs" className="ma-browse">
                     Browse Jobs
@@ -704,6 +709,7 @@ const MyApplications = () => {
                   </Link>
                 </div>
               )}
+
             </main>
           </>
         )}
