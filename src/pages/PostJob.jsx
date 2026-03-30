@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { saveJob, getCompanyByUserId } from '../storage';
+import { saveJob, getCompanyByUserId } from '../components/data/storage';
 
 // Icons Component
 const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
