@@ -24,13 +24,10 @@ const CVViewer = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    
-    // Only company can access this page
     if (!userData || userData.type !== 'company') {
       navigate('/login');
       return;
     }
-    
     setUser(userData);
     loadCompanyAndData(userData);
   }, [navigate]);
@@ -43,22 +40,18 @@ const CVViewer = () => {
     try {
       setLoading(true);
       
-      // Get company by user ID
       const companyRes = await fetch(`${API_URL}/companies/user/${userData.id}`);
       if (!companyRes.ok) {
-        console.error('Company not found');
         setLoading(false);
         return;
       }
       const companyData = await companyRes.json();
       setCompany(companyData);
       
-      // Get all jobs for this company
       const jobsRes = await fetch(`${API_URL}/jobs/company/${companyData.id}`);
       const jobsData = jobsRes.ok ? await jobsRes.json() : [];
       setJobs(jobsData);
       
-      // Get applications for each job
       const allApps = [];
       for (const job of jobsData) {
         try {
@@ -76,7 +69,6 @@ const CVViewer = () => {
         }
       }
       
-      // Sort by date (newest first)
       allApps.sort((a, b) => new Date(b.applied_at) - new Date(a.applied_at));
       setApplications(allApps);
       setFilteredApps(allApps);
@@ -177,7 +169,6 @@ const CVViewer = () => {
 
   const activeFilterCount = Object.values(filters).filter(v => v).length;
 
-  // Loading state
   if (loading) {
     return (
       <>
@@ -200,7 +191,6 @@ const CVViewer = () => {
     );
   }
 
-  // No company profile found
   if (!company) {
     return (
       <>
@@ -212,7 +202,7 @@ const CVViewer = () => {
             borderRadius: '16px', 
             padding: '2rem' 
           }}>
-            <h2 style={{ marginBottom: '0.5rem', color: '#92400E' }}>⚠️ Company Profile Required</h2>
+            <h2 style={{ marginBottom: '0.5rem', color: '#92400E' }}>Company Profile Required</h2>
             <p style={{ color: '#B45309', marginBottom: '1.5rem' }}>
               Please complete your company profile to view applications.
             </p>
@@ -236,7 +226,6 @@ const CVViewer = () => {
     );
   }
 
-  // No jobs posted
   if (jobs.length === 0) {
     return (
       <>
@@ -248,7 +237,7 @@ const CVViewer = () => {
             borderRadius: '16px', 
             padding: '2rem' 
           }}>
-            <h2 style={{ marginBottom: '0.5rem' }}>📭 No Jobs Posted Yet</h2>
+            <h2 style={{ marginBottom: '0.5rem' }}>No Jobs Posted Yet</h2>
             <p style={{ color: '#6B7280', marginBottom: '1.5rem' }}>
               Post a job to start receiving applications.
             </p>
@@ -587,10 +576,6 @@ const CVViewer = () => {
               <div className="cv-stat-label">Auto-Shortlisted</div>
             </div>
             <div className="cv-stat">
-              <div className="cv-stat-value">{applications.filter(a => a.status === 'shortlisted' && a.cv_score < 50).length}</div>
-              <div className="cv-stat-label">Manual Shortlisted</div>
-            </div>
-            <div className="cv-stat">
               <div className="cv-stat-value">{applications.filter(a => a.status === 'hired').length}</div>
               <div className="cv-stat-label">Hired</div>
             </div>
@@ -716,7 +701,6 @@ const CVViewer = () => {
         )}
       </div>
 
-      {/* CV Modal */}
       {selectedCV && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -733,19 +717,13 @@ const CVViewer = () => {
                   <p><strong>CV Match Score:</strong> {selectedCV.cv_score}%</p>
                 )}
                 <p><strong>Status:</strong> {getStatusLabel(selectedCV.status)}</p>
-                {selectedCV.cover_letter && (
-                  <p><strong>Cover Letter:</strong> {selectedCV.cover_letter.substring(0, 200)}...</p>
-                )}
               </div>
               <div className="cv-content">
                 {loadingCV ? (
                   <div style={{ textAlign: 'center', padding: '2rem' }}>Loading CV content...</div>
                 ) : (
-                  cvContent || 'No CV content available. The file may be stored on server.'
+                  cvContent || 'No CV content available.'
                 )}
-              </div>
-              <div style={{ marginTop: '1rem', fontSize: '0.7rem', color: '#9CA3AF', textAlign: 'center' }}>
-                CV file path: {selectedCV.resume_path || 'Not available'}
               </div>
             </div>
           </div>
