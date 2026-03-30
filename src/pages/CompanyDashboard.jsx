@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { getJobsByCompany, getApplicationsByJob, getCompanyByUserId, updateApplicationStatus as updateAppStatus } from '../data/storage';
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
@@ -20,7 +19,6 @@ const ic = {
   barChart:   'M18 20V10M12 20V4M6 20v-6',
   building:   'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9zM9 22V12h6v10',
   check:      'M20 6L9 17l-5-5',
-  x:          'M18 6L6 18M6 6l12 12',
   plus:       'M12 5v14M5 12h14',
   refresh:    'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15',
   edit:       'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z',
@@ -67,13 +65,13 @@ const STATUS_MAP = {
 
 const statusStyle = (status) => {
   const map = {
-    'pending':              [C.amberLight, C.amber],
-    'reviewed':             [C.blueLight, C.blue],
-    'shortlisted':          [C.greenLight, C.green],
-    'interview_scheduled':  [C.purpleLight, C.purple],
-    'interview_completed':  ['#F3E8FF', C.purpleDark],
-    'rejected':             [C.redLight, C.red],
-    'hired':                [C.greenLight, '#065F46'],
+    'pending':             [C.amberLight, C.amber],
+    'reviewed':            [C.blueLight, C.blue],
+    'shortlisted':         [C.greenLight, C.green],
+    'interview_scheduled': [C.purpleLight, C.purple],
+    'interview_completed': ['#F3E8FF', C.purpleDark],
+    'rejected':            [C.redLight, C.red],
+    'hired':               [C.greenLight, '#065F46'],
   };
   return map[status] || [C.grey100, C.grey600];
 };
@@ -109,6 +107,7 @@ const CompanyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [updatingId, setUpdatingId] = useState(null);
   const [stats, setStats] = useState({
     totalJobs:0, activeJobs:0, totalApplications:0,
     shortlisted:0, interviews:0, hired:0,
@@ -124,16 +123,13 @@ const CompanyDashboard = () => {
 
   const loadAll = async (userData) => {
     try {
-      // 1. Get company profile
       const comp = await getCompanyByUserId(userData.id);
       setCompany(comp);
       if (!comp) { setLoading(false); return; }
 
-      // 2. Get company jobs
       const jobs = await getJobsByCompany(comp.id);
       setCompanyJobs(jobs);
 
-      // 3. Get applications for all jobs
       const allApps = [];
       await Promise.all(jobs.map(async (job) => {
         try {
@@ -147,7 +143,6 @@ const CompanyDashboard = () => {
       }));
       setApplications(allApps);
 
-      // 4. Stats
       setStats({
         totalJobs: jobs.length,
         activeJobs: jobs.filter(j => j.status === 'active').length,
@@ -164,11 +159,25 @@ const CompanyDashboard = () => {
   };
 
   const updateStatus = async (appId, newStatus) => {
+    setUpdatingId(appId);
     try {
       await updateAppStatus(appId, newStatus);
-      if (user) loadAll(user);
+      // Update local state immediately
+      setApplications(prev => prev.map(a =>
+        a.id === appId ? { ...a, status: newStatus } : a
+      ));
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        shortlisted: applications.filter(a => (a.id === appId ? newStatus : a.status) === 'shortlisted').length,
+        interviews: applications.filter(a => ['interview_scheduled','interview_completed'].includes(a.id === appId ? newStatus : a.status)).length,
+        hired: applications.filter(a => (a.id === appId ? newStatus : a.status) === 'hired').length,
+      }));
     } catch (e) {
       console.error(e);
+      alert('Status update failed. Please try again.');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -192,24 +201,24 @@ const CompanyDashboard = () => {
   ];
 
   const STATS = [
-    { icon:ic.briefcase, label:'Total Jobs',    value:stats.totalJobs,    iconBg:C.blueLight,  iconColor:C.blue },
-    { icon:ic.users,     label:'Applications',  value:stats.totalApplications, iconBg:C.purpleLight, iconColor:C.purple },
-    { icon:ic.star,      label:'Shortlisted',   value:stats.shortlisted,  iconBg:C.greenLight, iconColor:C.green },
-    { icon:ic.video,     label:'Interviews',    value:stats.interviews,   iconBg:'#F3E8FF',    iconColor:C.purpleDark },
-    { icon:ic.check,     label:'Hired',         value:stats.hired,        iconBg:C.greenLight, iconColor:'#065F46' },
+    { icon:ic.briefcase, label:'Total Jobs',       value:stats.totalJobs,         iconBg:C.blueLight,   iconColor:C.blue },
+    { icon:ic.users,     label:'Applications',     value:stats.totalApplications, iconBg:C.purpleLight, iconColor:C.purple },
+    { icon:ic.star,      label:'Shortlisted',      value:stats.shortlisted,       iconBg:C.greenLight,  iconColor:C.green },
+    { icon:ic.video,     label:'Interviews',       value:stats.interviews,        iconBg:'#F3E8FF',     iconColor:C.purpleDark },
+    { icon:ic.check,     label:'Hired',            value:stats.hired,             iconBg:C.greenLight,  iconColor:'#065F46' },
   ];
 
   if (loading) return (
     <PageShell>
       <div style={{ textAlign:'center', padding:'5rem 0' }}>
-        <div style={{ fontSize:'0.9rem', color:C.grey600 }}>Loading dashboard…</div>
+        <div style={{ fontSize:'0.9rem', color:C.grey600, fontFamily:font }}>Loading dashboard…</div>
       </div>
     </PageShell>
   );
 
   if (!company) return (
     <PageShell>
-      <div style={{ maxWidth:440, margin:'4rem auto', textAlign:'center' }}>
+      <div style={{ maxWidth:440, margin:'4rem auto', textAlign:'center', padding:'0 1rem' }}>
         <div style={{ ...card, padding:'2.5rem' }}>
           <h2 style={{ fontSize:'1.2rem', fontWeight:700, color:C.grey900, margin:'0 0 0.5rem' }}>
             Company Profile Not Found
@@ -310,6 +319,7 @@ const CompanyDashboard = () => {
                 <button onClick={() => setActiveTab('applications')}
                   style={{ ...btn, background:C.purpleLight, color:C.purple, border:'none' }}>
                   View All
+                  <Icon d={ic.arrowRight} size={13} color={C.purple} />
                 </button>
               </SectionHead>
               {applications.length > 0 ? (
@@ -317,7 +327,7 @@ const CompanyDashboard = () => {
                   <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Job','Applied','Status','Actions'].map(h => (
+                        {['Candidate','Job','Applied','Status','Action'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -341,7 +351,8 @@ const CompanyDashboard = () => {
                             </td>
                             <td style={td}>
                               <button onClick={() => setActiveTab('applications')}
-                                style={{ ...btn, height:32, background:C.grey100, color:C.grey700, border:`1px solid ${C.grey200}` }}>
+                                style={{ ...btn, height:32, background:C.grey100,
+                                  color:C.grey700, border:`1px solid ${C.grey200}` }}>
                                 Details
                               </button>
                             </td>
@@ -372,7 +383,10 @@ const CompanyDashboard = () => {
                 const appCount = applications.filter(a => a.job_id === job.id).length;
                 return (
                   <div key={job.id} style={{ border:`1px solid ${C.grey200}`, borderRadius:12,
-                    padding:'1.125rem 1.25rem', marginBottom:10 }}>
+                    padding:'1.125rem 1.25rem', marginBottom:10,
+                    transition:'box-shadow 0.2s, border-color 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.07)'; e.currentTarget.style.borderColor=C.purpleMid; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor=C.grey200; }}>
                     <div style={{ display:'flex', justifyContent:'space-between',
                       alignItems:'flex-start', flexWrap:'wrap', gap:8, marginBottom:8 }}>
                       <h3 style={{ fontSize:'1rem', fontWeight:700, color:C.grey900, margin:0 }}>
@@ -392,7 +406,8 @@ const CompanyDashboard = () => {
                     </div>
                     <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                       <Link to={`/job/${job.id}`}
-                        style={{ ...btn, height:34, background:C.grey100, color:C.grey700, border:`1px solid ${C.grey200}` }}>
+                        style={{ ...btn, height:34, background:C.grey100,
+                          color:C.grey700, border:`1px solid ${C.grey200}` }}>
                         <Icon d={ic.eye} size={13} color={C.grey700} />
                         View
                       </Link>
@@ -417,30 +432,39 @@ const CompanyDashboard = () => {
               <SectionHead title="All Applications">
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   {[
-                    { key:'all', label:'All' },
-                    { key:'pending', label:'Applied' },
-                    { key:'shortlisted', label:'Shortlisted' },
-                    { key:'interview_scheduled', label:'Interview Scheduled' },
-                    { key:'interview_completed', label:'Completed' },
-                    { key:'rejected', label:'Rejected' },
-                    { key:'hired', label:'Hired' },
+                    { key:'all',                  label:'All' },
+                    { key:'pending',              label:'Applied' },
+                    { key:'reviewed',             label:'Under Review' },
+                    { key:'shortlisted',          label:'Shortlisted' },
+                    { key:'interview_scheduled',  label:'Scheduled' },
+                    { key:'interview_completed',  label:'Completed' },
+                    { key:'rejected',             label:'Rejected' },
+                    { key:'hired',                label:'Hired' },
                   ].map(f => (
                     <button key={f.key} onClick={() => setStatusFilter(f.key)}
-                      style={{ ...btn, height:34,
+                      style={{ ...btn, height:32, fontSize:'0.75rem',
                         background:statusFilter===f.key?C.purple:C.grey100,
                         color:statusFilter===f.key?C.white:C.grey600,
                         border:`1px solid ${statusFilter===f.key?C.purple:C.grey200}` }}>
                       {f.label}
+                      <span style={{
+                        fontSize:'0.65rem', fontWeight:700,
+                        background: statusFilter===f.key ? 'rgba(255,255,255,0.25)' : C.grey200,
+                        padding:'1px 6px', borderRadius:999,
+                      }}>
+                        {f.key==='all' ? applications.length : applications.filter(a=>a.status===f.key).length}
+                      </span>
                     </button>
                   ))}
                 </div>
               </SectionHead>
+
               {filtered.length > 0 ? (
                 <TableWrap>
-                  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:900 }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1000 }}>
                     <thead>
                       <tr>
-                        {['Candidate','Email','Job','Applied','Status','Change Status'].map(h => (
+                        {['Candidate','Email','Job','Applied','Status','Actions'].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -448,6 +472,7 @@ const CompanyDashboard = () => {
                     <tbody>
                       {filtered.map(app => {
                         const [sBg, sCol] = statusStyle(app.status);
+                        const isUpdating = updatingId === app.id;
                         return (
                           <tr key={app.id}
                             onMouseEnter={e => e.currentTarget.style.background=C.grey50}
@@ -464,25 +489,89 @@ const CompanyDashboard = () => {
                               </span>
                             </td>
                             <td style={td}>
-                              <select
-                                value={app.status}
-                                onChange={e => updateStatus(app.id, e.target.value)}
-                                style={{ fontFamily:font, fontSize:'0.78rem', fontWeight:600,
-                                  padding:'4px 8px', borderRadius:6,
-                                  background:sBg, color:sCol,
-                                  border:`1px solid ${sCol}40`, cursor:'pointer', outline:'none' }}>
-                                {[
-                                  { val:'pending', label:'Applied' },
-                                  { val:'reviewed', label:'Under Review' },
-                                  { val:'shortlisted', label:'Shortlisted' },
-                                  { val:'interview_scheduled', label:'Interview Scheduled' },
-                                  { val:'interview_completed', label:'Interview Completed' },
-                                  { val:'rejected', label:'Rejected' },
-                                  { val:'hired', label:'Hired' },
-                                ].map(s => (
-                                  <option key={s.val} value={s.val}>{s.label}</option>
-                                ))}
-                              </select>
+                              <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+
+                                {/* Status dropdown */}
+                                <select
+                                  value={app.status}
+                                  disabled={isUpdating}
+                                  onChange={e => updateStatus(app.id, e.target.value)}
+                                  style={{ fontFamily:font, fontSize:'0.78rem', fontWeight:600,
+                                    padding:'4px 8px', borderRadius:6,
+                                    background:sBg, color:sCol,
+                                    border:`1px solid ${sCol}40`,
+                                    cursor:isUpdating?'not-allowed':'pointer', outline:'none',
+                                    opacity:isUpdating?0.6:1 }}>
+                                  {[
+                                    { val:'pending',              label:'Applied' },
+                                    { val:'reviewed',             label:'Under Review' },
+                                    { val:'shortlisted',          label:'Shortlisted' },
+                                    { val:'interview_scheduled',  label:'Interview Scheduled' },
+                                    { val:'interview_completed',  label:'Interview Completed' },
+                                    { val:'rejected',             label:'Rejected' },
+                                    { val:'hired',                label:'Hired' },
+                                  ].map(s => (
+                                    <option key={s.val} value={s.val}>{s.label}</option>
+                                  ))}
+                                </select>
+
+                                {/* Schedule Interview button — shows when shortlisted */}
+                                {app.status === 'shortlisted' && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={() => updateStatus(app.id, 'interview_scheduled')}
+                                    style={{ ...btn, height:32, fontSize:'0.75rem',
+                                      background:C.purple, color:C.white, border:'none',
+                                      opacity:isUpdating?0.6:1,
+                                      cursor:isUpdating?'not-allowed':'pointer' }}>
+                                    <Icon d={ic.calendar} size={12} color={C.white} />
+                                    {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
+                                  </button>
+                                )}
+
+                                {/* Hire button — shows when interview completed */}
+                                {app.status === 'interview_completed' && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={() => updateStatus(app.id, 'hired')}
+                                    style={{ ...btn, height:32, fontSize:'0.75rem',
+                                      background:C.green, color:C.white, border:'none',
+                                      opacity:isUpdating?0.6:1,
+                                      cursor:isUpdating?'not-allowed':'pointer' }}>
+                                    <Icon d={ic.check} size={12} color={C.white} />
+                                    {isUpdating ? 'Hiring...' : 'Hire'}
+                                  </button>
+                                )}
+
+                                {/* Reject button — shows when applied or reviewed */}
+                                {['pending','reviewed'].includes(app.status) && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={() => updateStatus(app.id, 'rejected')}
+                                    style={{ ...btn, height:32, fontSize:'0.75rem',
+                                      background:C.redLight, color:C.red, border:'none',
+                                      opacity:isUpdating?0.6:1,
+                                      cursor:isUpdating?'not-allowed':'pointer' }}>
+                                    <Icon d={ic.check} size={12} color={C.red} />
+                                    Reject
+                                  </button>
+                                )}
+
+                                {/* Shortlist button — shows when applied or reviewed */}
+                                {['pending','reviewed'].includes(app.status) && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={() => updateStatus(app.id, 'shortlisted')}
+                                    style={{ ...btn, height:32, fontSize:'0.75rem',
+                                      background:C.greenLight, color:C.green, border:'none',
+                                      opacity:isUpdating?0.6:1,
+                                      cursor:isUpdating?'not-allowed':'pointer' }}>
+                                    <Icon d={ic.star} size={12} color={C.green} />
+                                    {isUpdating ? 'Shortlisting...' : 'Shortlist'}
+                                  </button>
+                                )}
+
+                              </div>
                             </td>
                           </tr>
                         );
@@ -527,6 +616,16 @@ const CompanyDashboard = () => {
                       <Pill icon={ic.mapPin} text={company.location || 'Location N/A'} />
                     </div>
                   </div>
+                  <div style={{ marginBottom:'1.5rem', padding:'1rem 1.25rem',
+                    background:C.grey50, borderRadius:10, border:`1px solid ${C.grey100}` }}>
+                    <div style={{ fontSize:'0.72rem', fontWeight:700, color:C.grey400,
+                      textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
+                      About
+                    </div>
+                    <p style={{ fontSize:'0.875rem', color:C.grey700, lineHeight:1.75, margin:0 }}>
+                      {company.description || 'No description added yet.'}
+                    </p>
+                  </div>
                   <div style={{ display:'grid',
                     gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:12 }}>
                     {[
@@ -551,13 +650,14 @@ const CompanyDashboard = () => {
               )}
             </div>
           )}
+
         </div>
       </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
-        button:hover { filter: brightness(0.92) !important; }
+        button:hover:not(:disabled) { filter: brightness(0.92) !important; }
         a:hover { filter: brightness(0.88) !important; }
       `}</style>
     </PageShell>
