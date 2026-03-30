@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { getCompanyByUserId, saveCompany, updateCompany } from '../data/storage';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
@@ -111,11 +112,12 @@ const SocialField = ({ label, icon, iconColor, placeholder, name, value, onChang
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const CompanyProfileEdit = () => {
-  const [user, setUser]       = useState(null);
+  const [user, setUser] = useState(null);
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [success, setSuccess] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -127,32 +129,64 @@ const CompanyProfileEdit = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
-    if (!userData || userData.type !== 'company') { navigate('/login'); return; }
+    if (!userData || userData.type !== 'company') { 
+      navigate('/login'); 
+      return; 
+    }
     setUser(userData);
     loadCompanyData(userData);
   }, [navigate]);
 
-  const loadCompanyData = (userData) => {
+  const loadCompanyData = async (userData) => {
     try {
-      const companies = JSON.parse(localStorage.getItem('companies') || '[]');
-      const cp = companies.find(c =>
-        c.userId === userData.id || c.email === userData.email || c.name === userData.name);
-      if (cp) {
-        setCompany(cp);
+      setFetching(true);
+      // Try to fetch from backend API first
+      const companyData = await getCompanyByUserId(userData.id);
+      
+      if (companyData) {
+        setCompany(companyData);
         setFormData({
-          name: cp.name || '', email: cp.email || userData.email || '',
-          industry: cp.industry || '', location: cp.location || '',
-          website: cp.website || '', founded: cp.founded || '',
-          totalEmployees: cp.totalEmployees || '', description: cp.description || '',
-          logo: cp.logo || '', phone: cp.phone || '', address: cp.address || '',
+          name: companyData.name || '',
+          email: companyData.email || userData.email || '',
+          industry: companyData.industry || '',
+          location: companyData.location || '',
+          website: companyData.website || '',
+          founded: companyData.founded || '',
+          totalEmployees: companyData.totalEmployees || '',
+          description: companyData.description || '',
+          logo: companyData.logo || '',
+          phone: companyData.phone || '',
+          address: companyData.address || '',
           socialMedia: {
-            linkedin: cp.socialMedia?.linkedin || '',
-            twitter:  cp.socialMedia?.twitter  || '',
-            facebook: cp.socialMedia?.facebook || '',
+            linkedin: companyData.socialMedia?.linkedin || '',
+            twitter: companyData.socialMedia?.twitter || '',
+            facebook: companyData.socialMedia?.facebook || '',
           },
         });
+      } else {
+        // No company found, user needs to create profile
+        setCompany(null);
+        setFormData({
+          name: userData.name || '',
+          email: userData.email || '',
+          industry: '',
+          location: '',
+          website: '',
+          founded: '',
+          totalEmployees: '',
+          description: '',
+          logo: '',
+          phone: '',
+          address: '',
+          socialMedia: { linkedin: '', twitter: '', facebook: '' },
+        });
       }
-    } catch (e) { console.error(e); }
+    } catch (error) {
+      console.error('Error loading company data:', error);
+      setError('Failed to load company data. Please try again.');
+    } finally {
+      setFetching(false);
+    }
   };
 
   const handleChange = e => {
@@ -173,38 +207,49 @@ const CompanyProfileEdit = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (!formData.name || !formData.email) {
-      setError('Company name and email are required.'); return;
+      setError('Company name and email are required.');
+      return;
     }
     setLoading(true);
+    
     try {
-      const companies = JSON.parse(localStorage.getItem('companies') || '[]');
-      let updated;
+      const companyData = {
+        userId: user.id,
+        name: formData.name,
+        email: formData.email,
+        industry: formData.industry,
+        location: formData.location,
+        description: formData.description,
+        website: formData.website,
+        founded: formData.founded,
+        totalEmployees: formData.totalEmployees,
+        logo: formData.logo,
+        phone: formData.phone,
+        address: formData.address,
+        socialMedia: formData.socialMedia,
+      };
+      
+      let result;
       if (company) {
-        updated = companies.map(c =>
-          c.id === company.id
-            ? { ...c, ...formData, socialMedia: formData.socialMedia, updatedAt: new Date().toISOString() }
-            : c);
+        // Update existing company
+        result = await updateCompany(company.id, companyData);
       } else {
-        updated = [...companies, {
-          id: Date.now(), userId: user.id, ...formData,
-          socialMedia: formData.socialMedia,
-          openPositions: 0, rating: 0, activeJobs: [],
-          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-        }];
+        // Create new company
+        result = await saveCompany(companyData);
       }
-      localStorage.setItem('companies', JSON.stringify(updated));
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      localStorage.setItem('users', JSON.stringify(
-        users.map(u => u.id === user.id ? { ...u, name: formData.name, email: formData.email } : u)));
-      const cu = JSON.parse(localStorage.getItem('user'));
-      if (cu) localStorage.setItem('user', JSON.stringify({ ...cu, name: formData.name, email: formData.email }));
+      
+      // Update local user data
+      const updatedUser = { ...user, name: formData.name, email: formData.email };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
       setSuccess(true);
       setTimeout(() => navigate('/company/dashboard'), 2000);
-    } catch {
+    } catch (err) {
+      console.error('Error saving company:', err);
       setError('Failed to save profile. Please try again.');
     } finally {
       setLoading(false);
@@ -212,11 +257,28 @@ const CompanyProfileEdit = () => {
   };
 
   const industries = [
-    'Information Technology','Artificial Intelligence','Software Development','Cloud Computing',
-    'Data Science','Cybersecurity','E-commerce','Fintech','Healthcare','Education',
-    'Consulting','Marketing','Design','Manufacturing','Retail','Other',
+    'Information Technology', 'Artificial Intelligence', 'Software Development', 'Cloud Computing',
+    'Data Science', 'Cybersecurity', 'E-commerce', 'Fintech', 'Healthcare', 'Education',
+    'Consulting', 'Marketing', 'Design', 'Manufacturing', 'Retail', 'Other',
   ];
-  const employeeRanges = ['1-10','11-50','51-200','201-500','501-1000','1001-5000','5000+'];
+  const employeeRanges = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'];
+
+  if (fetching) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
+        <Navbar />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ animation: 'spin 1s linear infinite', width: 40, height: 40, margin: '0 auto' }}>
+              <Icon d={ic.loader} size={40} color={C.purple} />
+            </div>
+            <p style={{ marginTop: '1rem', color: C.grey600 }}>Loading company data...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
@@ -268,7 +330,6 @@ const CompanyProfileEdit = () => {
           {/* Logo */}
           <Section icon={ic.image} iconBg={C.purpleLight} iconColor={C.purple} title="Company Logo">
             <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-              {/* Avatar preview */}
               <div style={{ width: 90, height: 90, borderRadius: 14, overflow: 'hidden',
                 border: `2px solid ${C.grey200}`, background: C.grey100, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
