@@ -2,98 +2,139 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { jobs, applications, candidates, companies } from '../data';
-import { calculateCVJobMatch, parseCVFile } from '../data/jobs.json.js';
+import { getJobById, saveApplication, getApplicationsByJob } from '../data/storage';
+
+// Icons Component (same as PostJob)
+const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+const ic = {
+  mapPin: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 13a3 3 0 100-6 3 3 0 000 6z',
+  dollar: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+  clock: 'M12 6v6l4 2M12 22a10 10 0 100-20 10 10 0 000 20z',
+  calendar: 'M3 9h18M3 6a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6zM8 2v4M16 2v4',
+  briefcase: 'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2',
+  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  check: 'M20 6L9 17l-5-5',
+  x: 'M18 6L6 18M6 6l12 12',
+  alert: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
+  upload: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  arrowLeft: 'M19 12H5M12 5l-7 7 7 7',
+  building: 'M3 9l9-7 9 7v11a2 2 0 01-2 2h-5v-8H9v8H5a2 2 0 01-2-2z',
+  tool: 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',
+  fileText: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  loader: 'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83',
+  users: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z',
+  tag: 'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01',
+};
+
+// Color Tokens (same as PostJob)
+const C = {
+  white: '#FFFFFF',
+  grey50: '#F8F9FB',
+  grey100: '#F0F2F7',
+  grey200: '#E2E6EF',
+  grey400: '#9CA3B8',
+  grey600: '#6B7280',
+  grey700: '#374151',
+  grey900: '#111827',
+  purple: '#7C3AED',
+  purpleLight: '#EDE9FE',
+  purpleMid: '#A78BFA',
+  purpleDark: '#4C1D95',
+  green: '#059669',
+  greenLight: '#D1FAE5',
+  red: '#DC2626',
+  redLight: '#FEE2E2',
+  amber: '#D97706',
+  amberLight: '#FEF3C7',
+  blue: '#2563EB',
+  blueLight: '#DBEAFE',
+};
+
+const font = "'Poppins', sans-serif";
+
+const btn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  height: 44,
+  padding: '0 22px',
+  borderRadius: 10,
+  border: 'none',
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: font,
+  textDecoration: 'none',
+  transition: 'all 0.2s ease',
+  whiteSpace: 'nowrap',
+};
+
+const inputBase = {
+  width: '100%',
+  padding: '12px 14px',
+  fontFamily: font,
+  border: `1.5px solid ${C.grey200}`,
+  borderRadius: 10,
+  fontSize: '0.875rem',
+  color: C.grey900,
+  outline: 'none',
+  background: C.white,
+  transition: 'all 0.2s ease',
+  boxSizing: 'border-box',
+};
 
 const JobDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [job, setJob] = useState(null);
-  const [company, setCompany] = useState(null);
-  const [relatedJobs, setRelatedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [hasApplied, setHasApplied] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [cvScore, setCvScore] = useState(null);
-  const [cvAnalyzing, setCvAnalyzing] = useState(false);
   const [cvFile, setCvFile] = useState(null);
   const [cvFileName, setCvFileName] = useState('');
-  const [applicationData, setApplicationData] = useState({
-    coverLetter: ''
-  });
-  const [forceReupload, setForceReupload] = useState(false);
+  const [applicationData, setApplicationData] = useState({ coverLetter: '' });
   const [uploadError, setUploadError] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [alertType, setAlertType] = useState('success'); // success, error, warning
+  const [alertType, setAlertType] = useState('success');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Check logged in user
-    const userData = JSON.parse(localStorage.getItem('user'));
-    setUser(userData);
-
-    // Load job details
-    const allJobs = jobs.getJobs();
-    const foundJob = allJobs.find(j => j.id === parseInt(id));
-    
-    if (foundJob) {
-      setJob(foundJob);
-      
-      // Load company details
-      const allCompanies = companies.getCompanies();
-      const foundCompany = allCompanies.find(c => c.id === foundJob.companyId || c.name === foundJob.company);
-      setCompany(foundCompany);
-
-      // Load related jobs
-      const related = allJobs
-        .filter(j => j.id !== foundJob.id && (j.category === foundJob.category || j.company === foundJob.company))
-        .slice(0, 3);
-      setRelatedJobs(related);
-
-      // CRITICAL FIX: Check if user has already applied with correct ID comparison
-      if (userData && userData.type === 'candidate') {
-        const allApplications = applications.getApplications();
-        console.log('Checking applications for job:', foundJob.id, 'candidate:', userData.profileId);
-        console.log('All applications:', allApplications);
-        
-        const applied = allApplications.some(a => {
-          // Convert both to numbers/strings for proper comparison
-          const jobIdMatch = Number(a.jobId) === Number(foundJob.id);
-          const candidateIdMatch = Number(a.candidateId) === Number(userData.profileId);
-          return jobIdMatch && candidateIdMatch;
-        });
-        
-        console.log('Has applied:', applied);
-        setHasApplied(applied);
-      } else {
-        setHasApplied(false);
+    const loadJobData = async () => {
+      try {
+        setLoading(true);
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setUser(userData);
+        const jobData = await getJobById(id);
+        setJob(jobData);
+        if (userData && userData.type === 'candidate') {
+          const applications = await getApplicationsByJob(id);
+          const applied = applications.some(a => a.candidate_id === userData.id);
+          setHasApplied(applied);
+        }
+      } catch (error) {
+        console.error('Error loading job:', error);
+        navigate('/jobs');
+      } finally {
+        setLoading(false);
       }
-    } else {
-      navigate('/jobs');
-    }
-
-    setLoading(false);
+    };
+    loadJobData();
   }, [id, navigate]);
 
-  // Re-check application status when modal closes or when job changes
-  useEffect(() => {
-    if (user && user.type === 'candidate' && job) {
-      const allApplications = applications.getApplications();
-      const applied = allApplications.some(a => 
-        Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
-      );
-      setHasApplied(applied);
-    }
-  }, [user, job, showApplyModal]);
-
-  // Auto-hide alert after 3 seconds
   useEffect(() => {
     if (showAlert) {
-      const timer = setTimeout(() => {
-        setShowAlert(false);
-      }, 3000);
+      const timer = setTimeout(() => setShowAlert(false), 3500);
       return () => clearTimeout(timer);
     }
   }, [showAlert]);
@@ -104,986 +145,525 @@ const JobDetails = () => {
     setShowAlert(true);
   };
 
-  // Validate file type and size
   const validateFile = (file) => {
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const maxSize = 10 * 1024 * 1024;
     if (!allowedTypes.includes(file.type)) {
-      setUploadError('Only PDF and Word documents (.pdf, .doc, .docx) are allowed');
+      setUploadError('Only PDF and Word documents are allowed');
       return false;
     }
-    
     if (file.size > maxSize) {
       setUploadError('File size must be less than 10MB');
       return false;
     }
-    
     setUploadError('');
     return true;
   };
 
-  const handleCVUpload = async (e) => {
+  const handleCVUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    // Validate file
     if (!validateFile(file)) {
       setCvFile(null);
       setCvFileName('');
       return;
     }
-    
     setCvFile(file);
     setCvFileName(file.name);
-    setCvAnalyzing(true);
-    setCvScore(null); // Reset score while analyzing
-    
-    try {
-      // Simulate CV parsing and analysis
-      setTimeout(() => {
-        // Calculate a random score between 30-90 for demo
-        const randomScore = Math.floor(Math.random() * 60) + 30;
-        setCvScore(randomScore);
-        setCvAnalyzing(false);
-      }, 1500);
-      
-    } catch (error) {
-      console.error('Error analyzing CV:', error);
-      showCustomAlert('Error analyzing CV. Please try again.', 'error');
-      setCvScore(0);
-      setCvAnalyzing(false);
-    }
   };
 
   const handleApply = () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
     if (user.type !== 'candidate') {
       showCustomAlert('Only candidates can apply for jobs', 'warning');
       return;
     }
-    
-    // Double-check if already applied
-    const allApplications = applications.getApplications();
-    const alreadyApplied = allApplications.some(a => 
-      Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
-    );
-    
-    if (alreadyApplied) {
-      // Show option to upload again
-      const confirmReapply = window.confirm(
-        'You have already applied for this position.\n\nDo you want to upload your CV again? This will update your application.'
-      );
-      
-      if (confirmReapply) {
-        // Set force reupload mode
-        setForceReupload(true);
-        setShowApplyModal(true);
-        setCvScore(null);
-        setCvFile(null);
-        setCvFileName('');
-        setUploadError('');
-        setApplicationData({ coverLetter: '' });
-      }
-      return;
-    }
-    
-    setForceReupload(false);
     setShowApplyModal(true);
-    setCvScore(null);
-    setCvFile(null);
-    setCvFileName('');
-    setUploadError('');
-    setApplicationData({ coverLetter: '' });
   };
 
-  const handleApplicationSubmit = (e) => {
+  const handleApplicationSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!cvFile) {
-      showCustomAlert('Please upload your CV', 'warning');
-      return;
-    }
-    
-    if (cvScore === null) {
-      showCustomAlert('Please wait for CV analysis to complete', 'warning');
-      return;
-    }
-    
-    // Get all applications
-    let allApplications = applications.getApplications();
-    const existingApplicationIndex = allApplications.findIndex(a => 
-      Number(a.jobId) === Number(job.id) && Number(a.candidateId) === Number(user.profileId)
-    );
-    
-    if (existingApplicationIndex !== -1 && !forceReupload) {
-      showCustomAlert('You have already applied for this job!', 'warning');
+    if (!cvFile) { showCustomAlert('Please upload your CV', 'warning'); return; }
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('job_id', id);
+      formData.append('candidate_id', user.id);
+      formData.append('cover_letter', applicationData.coverLetter);
+      formData.append('resume', cvFile);
+      await saveApplication(formData);
+      showCustomAlert('Application submitted successfully!', 'success');
       setShowApplyModal(false);
       setHasApplied(true);
-      return;
+      setCvFile(null);
+      setCvFileName('');
+      setApplicationData({ coverLetter: '' });
+    } catch (error) {
+      showCustomAlert(error.message || 'Failed to submit application', 'error');
+    } finally {
+      setSubmitting(false);
     }
-    
-    // Get candidate
-    const allCandidates = candidates.getCandidates();
-    let candidate = allCandidates.find(c => Number(c.id) === Number(user.profileId));
-
-    let newApplication;
-    
-    if (existingApplicationIndex !== -1 && forceReupload) {
-      // Update existing application
-      const existingApp = allApplications[existingApplicationIndex];
-      newApplication = {
-        ...existingApp,
-        resume: cvFileName,
-        cvScore: cvScore,
-        coverLetter: applicationData.coverLetter || existingApp.coverLetter,
-        updatedAt: new Date().toISOString(),
-        reuploaded: true
-      };
-      
-      // Update in array
-      allApplications[existingApplicationIndex] = newApplication;
-      localStorage.setItem('applications', JSON.stringify(allApplications));
-      
-      if (cvScore >= 50) {
-        showCustomAlert(`✅ Application Updated! Your CV matches of the requirements. You are eligible for the interview.`, 'success');
-      } else {
-        showCustomAlert(`⚠️ Application Updated. Your CV matches of the requirements. You need 50% to be eligible for the interview.`, 'warning');
-      }
-    } else {
-      // Create new application
-      newApplication = applications.saveApplication({
-        jobId: job.id,
-        jobTitle: job.title,
-        company: job.company,
-        companyId: company?.id,
-        candidateId: user.profileId,
-        candidateName: user.name,
-        coverLetter: applicationData.coverLetter,
-        resume: cvFileName,
-        cvScore: cvScore,
-        appliedAt: new Date().toISOString()
-      });
-
-      // Update job applicants count only for new applications
-      jobs.incrementApplicants(job.id);
-
-      // Update candidate's applied jobs
-      if (candidate) {
-        const updatedCandidate = {
-          ...candidate,
-          appliedJobs: [...(candidate.appliedJobs || []), job.id]
-        };
-        candidates.saveCandidate(updatedCandidate);
-      }
-      
-      if (cvScore >= 50) {
-        showCustomAlert(`🎉 Application Submitted Successfully! Your CV matches of the requirements. You are eligible for the interview.`, 'success');
-      } else {
-        showCustomAlert(`📝 Application Submitted. Your CV matches of the requirements. You need 50% to be eligible for the interview.`, 'warning');
-      }
-    }
-
-    setShowApplyModal(false);
-    setHasApplied(true);
-    setForceReupload(false);
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#4caf50';
-    if (score >= 50) return '#ff9800';
-    return '#f44336';
-  };
-
-  const getScoreMessage = (score) => {
-    if (score >= 80) return 'Excellent Match!';
-    if (score >= 50) return 'Good Match - Eligible for Interview';
-    return 'Below Requirements - Not Eligible for Interview';
-  };
-
-  // Helper function to format salary display
   const formatSalary = (salary) => {
     if (!salary) return 'Not specified';
-    if (salary.toLowerCase().includes('unpaid')) {
-      return '💰 Unpaid Position (Volunteer/Internship)';
-    }
-    return `💰 ${salary}`;
+    if (salary.toLowerCase().includes('unpaid')) return 'Unpaid / Internship';
+    return salary;
   };
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#f8f9fa'
-    },
-    main: {
-      flex: 1,
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '2rem 5%',
-      width: '100%'
-    },
-    breadcrumb: {
-      marginBottom: '2rem',
-      color: '#666',
-      fontSize: '0.95rem'
-    },
-    breadcrumbLink: {
-      color: '#667eea',
-      textDecoration: 'none'
-    },
-    jobHeader: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '2rem',
-      marginBottom: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      display: 'flex',
-      gap: '2rem'
-    },
-    companyLogo: {
-      width: '100px',
-      height: '100px',
-      borderRadius: '10px',
-      objectFit: 'cover'
-    },
-    jobInfo: {
-      flex: 1
-    },
-    jobTitle: {
-      fontSize: '2rem',
-      color: '#333',
-      marginBottom: '0.5rem'
-    },
-    companyName: {
-      fontSize: '1.2rem',
-      color: '#667eea',
-      marginBottom: '1rem',
-      textDecoration: 'none',
-      display: 'inline-block'
-    },
-    jobMeta: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '1.5rem',
-      marginBottom: '1.5rem'
-    },
-    metaItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      color: '#666'
-    },
-    jobActions: {
-      display: 'flex',
-      gap: '1rem',
-      marginTop: '1rem'
-    },
-    applyBtn: {
-      background: '#667eea',
-      color: 'white',
-      padding: '0.75rem 2rem',
-      border: 'none',
-      borderRadius: '5px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer'
-    },
-    saveBtn: {
-      background: 'transparent',
-      color: '#667eea',
-      padding: '0.75rem 2rem',
-      border: '2px solid #667eea',
-      borderRadius: '5px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer'
-    },
-    appliedBadge: {
-      background: '#4caf50',
-      color: 'white',
-      padding: '0.5rem 1rem',
-      borderRadius: '5px',
-      display: 'inline-block',
-      fontWeight: 500
-    },
-    contentGrid: {
-      display: 'grid',
-      gridTemplateColumns: '2fr 1fr',
-      gap: '2rem'
-    },
-    mainContent: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-    },
-    sidebar: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '2rem',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      height: 'fit-content'
-    },
-    section: {
-      marginBottom: '2rem'
-    },
-    sectionTitle: {
-      fontSize: '1.3rem',
-      color: '#333',
-      marginBottom: '1rem',
-      paddingBottom: '0.5rem',
-      borderBottom: '2px solid #667eea'
-    },
-    description: {
-      color: '#4b5563',
-      lineHeight: 1.8,
-      marginBottom: '1.5rem',
-      whiteSpace: 'pre-line'
-    },
-    requirementsList: {
-      listStyle: 'none',
-      padding: 0
-    },
-    requirementItem: {
-      padding: '0.5rem 0',
-      color: '#4b5563',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    },
-    skillsContainer: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '0.5rem',
-      marginTop: '1rem'
-    },
-    skillTag: {
-      background: '#e5e7eb',
-      padding: '0.3rem 0.8rem',
-      borderRadius: '20px',
-      fontSize: '0.9rem',
-      color: '#4b5563'
-    },
-    companyCard: {
-      textAlign: 'center',
-      marginBottom: '2rem'
-    },
-    companyLogoLarge: {
-      width: '120px',
-      height: '120px',
-      borderRadius: '10px',
-      marginBottom: '1rem'
-    },
-    companyStats: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '1rem',
-      marginTop: '1.5rem',
-      padding: '1rem 0',
-      borderTop: '1px solid #e5e7eb',
-      borderBottom: '1px solid #e5e7eb'
-    },
-    companyStat: {
-      textAlign: 'center'
-    },
-    companyStatValue: {
-      fontSize: '1.2rem',
-      fontWeight: 'bold',
-      color: '#333'
-    },
-    companyStatLabel: {
-      fontSize: '0.8rem',
-      color: '#666'
-    },
-    relatedJobCard: {
-      padding: '1rem',
-      border: '1px solid #e5e7eb',
-      borderRadius: '5px',
-      marginBottom: '1rem'
-    },
-    relatedJobTitle: {
-      fontSize: '1rem',
-      color: '#333',
-      marginBottom: '0.25rem'
-    },
-    relatedJobCompany: {
-      fontSize: '0.9rem',
-      color: '#667eea',
-      marginBottom: '0.5rem'
-    },
-    relatedJobMeta: {
-      fontSize: '0.8rem',
-      color: '#666',
-      display: 'flex',
-      gap: '1rem'
-    },
-    viewJobLink: {
-      color: '#667eea',
-      textDecoration: 'none',
-      fontSize: '0.9rem',
-      fontWeight: 500
-    },
-    modalOverlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    },
-    modal: {
-      background: 'white',
-      borderRadius: '10px',
-      padding: '2rem',
-      maxWidth: '500px',
-      width: '90%',
-      maxHeight: '80vh',
-      overflow: 'auto'
-    },
-    modalHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '1.5rem'
-    },
-    modalTitle: {
-      fontSize: '1.3rem',
-      color: '#333'
-    },
-    closeBtn: {
-      background: 'none',
-      border: 'none',
-      fontSize: '1.5rem',
-      cursor: 'pointer',
-      color: '#666'
-    },
-    cvSection: {
-      marginBottom: '1.5rem',
-      padding: '1rem',
-      background: '#f8f9fa',
-      borderRadius: '8px'
-    },
-    cvLabel: {
-      display: 'block',
-      fontSize: '0.9rem',
-      fontWeight: 600,
-      color: '#4b5563',
-      marginBottom: '0.5rem'
-    },
-    cvInput: {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '5px',
-      fontSize: '0.95rem',
-      background: 'white',
-      cursor: 'pointer',
-      marginBottom: '0.5rem'
-    },
-    cvFileName: {
-      fontSize: '0.85rem',
-      color: '#667eea',
-      marginTop: '0.25rem'
-    },
-    cvAnalyzing: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      color: '#666',
-      fontSize: '0.9rem',
-      marginTop: '0.5rem'
-    },
-    cvScoreDisplay: {
-      marginTop: '1rem',
-      padding: '1rem',
-      borderRadius: '8px',
-      textAlign: 'center',
-      background: '#f0f4f8'
-    },
-    scoreCircle: {
-      width: '80px',
-      height: '80px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      margin: '0 auto 1rem',
-      fontSize: '1.8rem',
-      fontWeight: 'bold',
-      color: 'white'
-    },
-    scoreMessage: {
-      fontSize: '1rem',
-      fontWeight: 500,
-      marginBottom: '0.5rem'
-    },
-    scoreDetail: {
-      fontSize: '0.9rem',
-      color: '#666'
-    },
-    formGroup: {
-      marginBottom: '1.5rem'
-    },
-    label: {
-      display: 'block',
-      fontSize: '0.9rem',
-      fontWeight: 500,
-      color: '#4b5563',
-      marginBottom: '0.5rem'
-    },
-    textarea: {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '5px',
-      fontSize: '0.95rem',
-      minHeight: '120px'
-    },
-    modalActions: {
-      display: 'flex',
-      gap: '1rem',
-      marginTop: '1.5rem'
-    },
-    submitBtn: {
-      flex: 1,
-      padding: '0.75rem',
-      background: '#667eea',
-      color: 'white',
-      border: 'none',
-      borderRadius: '5px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer'
-    },
-    cancelBtn: {
-      flex: 1,
-      padding: '0.75rem',
-      background: 'transparent',
-      color: '#666',
-      border: '2px solid #e5e7eb',
-      borderRadius: '5px',
-      fontSize: '1rem',
-      fontWeight: 600,
-      cursor: 'pointer'
-    },
-    loading: {
-      textAlign: 'center',
-      padding: '3rem',
-      color: '#667eea'
-    },
-    reuploadNote: {
-      background: '#fff3e0',
-      padding: '0.75rem',
-      borderRadius: '5px',
-      marginBottom: '1rem',
-      fontSize: '0.9rem',
-      color: '#ed6c02',
-      borderLeft: '3px solid #ed6c02'
-    },
-    uploadError: {
-      color: '#f44336',
-      fontSize: '0.85rem',
-      marginTop: '0.5rem',
-      padding: '0.5rem',
-      background: '#ffebee',
-      borderRadius: '4px'
-    },
-    alertOverlay: {
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      zIndex: 9999,
-      animation: 'slideIn 0.3s ease'
-    },
-    alert: {
-      padding: '1rem 1.5rem',
-      borderRadius: '12px',
-      backgroundColor: 'white',
-      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      minWidth: '300px',
-      maxWidth: '450px',
-      borderLeft: '4px solid'
-    },
-    alertSuccess: {
-      borderLeftColor: '#4caf50'
-    },
-    alertError: {
-      borderLeftColor: '#f44336'
-    },
-    alertWarning: {
-      borderLeftColor: '#ff9800'
-    },
-    alertIcon: {
-      fontSize: '24px'
-    },
-    alertContent: {
-      flex: 1
-    },
-    alertTitle: {
-      fontSize: '0.85rem',
-      fontWeight: 'bold',
-      marginBottom: '0.25rem'
-    },
-    alertMessage: {
-      fontSize: '0.85rem',
-      color: '#666',
-      lineHeight: 1.4
-    },
-    alertClose: {
-      cursor: 'pointer',
-      color: '#999',
-      fontSize: '18px',
-      lineHeight: 1,
-      padding: '0 4px'
-    }
+  const isDeadlinePassed = (deadline) => {
+    if (!deadline) return false;
+    return new Date(deadline) < new Date();
   };
 
+  const getDaysLeft = (deadline) => {
+    if (!deadline) return null;
+    const diff = new Date(deadline) - new Date();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days < 0) return 'Expired';
+    if (days === 0) return 'Last day!';
+    return `${days} days left`;
+  };
+
+  // ─── Loading ───────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={styles.container}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
         <Navbar />
-        <div style={styles.loading}>Loading job details...</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+          <div style={{ animation: 'spin 1s linear infinite' }}>
+            <Icon d={ic.loader} size={32} color={C.purple} />
+          </div>
+          <span style={{ color: C.grey600, fontSize: '0.9rem' }}>Loading job details...</span>
+        </div>
         <Footer />
+        <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
       </div>
     );
   }
 
+  // ─── Not Found ────────────────────────────────────────────────
   if (!job) {
     return (
-      <div style={styles.container}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
         <Navbar />
-        <div style={{textAlign: 'center', padding: '3rem'}}>
-          <h2>Job not found</h2>
-          <Link to="/jobs" style={styles.breadcrumbLink}>Back to Jobs</Link>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+          <Icon d={ic.briefcase} size={48} color={C.grey200} />
+          <h2 style={{ color: C.grey700, margin: 0 }}>Job not found</h2>
+          <Link to="/jobs" style={{ ...btn, background: C.purple, color: C.white, textDecoration: 'none' }}>
+            <Icon d={ic.arrowLeft} size={14} color={C.white} /> Back to Jobs
+          </Link>
         </div>
         <Footer />
       </div>
     );
   }
 
+  const deadlinePassed = isDeadlinePassed(job.deadline);
+  const daysLeft = getDaysLeft(job.deadline);
+  const jobIsActive = job.status === 'active' && !deadlinePassed;
+
+  // ─── Main Render ──────────────────────────────────────────────
   return (
-    <div style={styles.container}>
-      {/* Custom Alert Popup */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.grey50, fontFamily: font }}>
+
+      {/* Toast Alert */}
       {showAlert && (
-        <div style={styles.alertOverlay}>
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, animation: 'slideIn 0.3s ease' }}>
           <div style={{
-            ...styles.alert,
-            ...(alertType === 'success' ? styles.alertSuccess : 
-               alertType === 'error' ? styles.alertError : 
-               styles.alertWarning)
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '14px 18px',
+            background: C.white,
+            borderRadius: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            borderLeft: `4px solid ${alertType === 'success' ? C.green : alertType === 'error' ? C.red : C.amber}`,
+            minWidth: 300,
           }}>
-            <div style={styles.alertIcon}>
-              {alertType === 'success' && '✅'}
-              {alertType === 'error' && '❌'}
-              {alertType === 'warning' && '⚠️'}
-            </div>
-            <div style={styles.alertContent}>
-              <div style={{
-                ...styles.alertTitle,
-                color: alertType === 'success' ? '#4caf50' : 
-                       alertType === 'error' ? '#f44336' : 
-                       '#ff9800'
-              }}>
-                {alertType === 'success' ? 'Success!' : 
-                 alertType === 'error' ? 'Error!' : 
-                 'Notice'}
+            <Icon
+              d={alertType === 'success' ? ic.check : ic.alert}
+              size={18}
+              color={alertType === 'success' ? C.green : alertType === 'error' ? C.red : C.amber}
+              sw={2.5}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: alertType === 'success' ? C.green : alertType === 'error' ? C.red : C.amber }}>
+                {alertType === 'success' ? 'Success!' : alertType === 'error' ? 'Error!' : 'Notice'}
               </div>
-              <div style={styles.alertMessage}>{alertMessage}</div>
+              <div style={{ fontSize: '0.8rem', color: C.grey600 }}>{alertMessage}</div>
             </div>
-            <div style={styles.alertClose} onClick={() => setShowAlert(false)}>×</div>
+            <button onClick={() => setShowAlert(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.grey400, padding: 0 }}>
+              <Icon d={ic.x} size={14} color={C.grey400} />
+            </button>
           </div>
         </div>
       )}
 
       <Navbar />
-      
-      <main style={styles.main}>
+
+      <main style={{ flex: 1, maxWidth: 1080, margin: '0 auto', width: '100%', padding: '2rem 1.5rem' }}>
+
         {/* Breadcrumb */}
-        <div style={styles.breadcrumb}>
-          <Link to="/" style={styles.breadcrumbLink}>Home</Link> {' > '}
-          <Link to="/jobs" style={styles.breadcrumbLink}>Jobs</Link> {' > '}
-          <span style={{color: '#333'}}>{job.title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.5rem', fontSize: '0.8rem', color: C.grey400 }}>
+          <Link to="/" style={{ color: C.purple, textDecoration: 'none', fontWeight: 500 }}>Home</Link>
+          <span>/</span>
+          <Link to="/jobs" style={{ color: C.purple, textDecoration: 'none', fontWeight: 500 }}>Jobs</Link>
+          <span>/</span>
+          <span style={{ color: C.grey700, fontWeight: 600 }}>{job.title}</span>
         </div>
 
-        {/* Job Header */}
-        <div style={styles.jobHeader}>
-          <img 
-            src={job.companyLogo || company?.logo || 'https://via.placeholder.com/100'} 
-            alt={job.company}
-            style={styles.companyLogo}
-          />
-          
-          <div style={styles.jobInfo}>
-            <h1 style={styles.jobTitle}>{job.title}</h1>
-            <Link to={`/company/${job.companyId}`} style={styles.companyName}>
-              {job.company}
-            </Link>
-            
-            <div style={styles.jobMeta}>
-              <span style={styles.metaItem}>📍 {job.location}</span>
-              <span style={styles.metaItem}>{formatSalary(job.salary)}</span>
-              <span style={styles.metaItem}>⏰ {job.type}</span>
-              <span style={styles.metaItem}>📅 Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
+        {/* ── Job Header Card ── */}
+        <div style={{
+          background: C.white,
+          borderRadius: 16,
+          border: `1px solid ${C.grey200}`,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+          padding: '2rem',
+          marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+
+            {/* Company Logo */}
+            <div style={{
+              width: 80, height: 80, borderRadius: 14,
+              border: `1.5px solid ${C.grey200}`,
+              overflow: 'hidden', flexShrink: 0,
+              background: C.grey50,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              {job.company_logo
+                ? <img src={job.company_logo} alt={job.company_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <Icon d={ic.building} size={32} color={C.grey300} />
+              }
             </div>
 
-            <div style={styles.jobActions}>
-              {user?.type === 'candidate' && !hasApplied && (
-                <button onClick={handleApply} style={styles.applyBtn}>
+            {/* Title + Meta */}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              {/* Status badges */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '3px 10px', borderRadius: 999,
+                  fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  background: jobIsActive ? C.greenLight : C.redLight,
+                  color: jobIsActive ? C.green : C.red,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: jobIsActive ? C.green : C.red, display: 'inline-block' }} />
+                  {jobIsActive ? 'Actively Hiring' : 'Closed'}
+                </span>
+
+                {job.category && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 10px', borderRadius: 999,
+                    fontSize: '0.7rem', fontWeight: 600,
+                    background: C.purpleLight, color: C.purple,
+                  }}>
+                    <Icon d={ic.tag} size={10} color={C.purple} />
+                    {job.category}
+                  </span>
+                )}
+
+                {daysLeft && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 10px', borderRadius: 999,
+                    fontSize: '0.7rem', fontWeight: 600,
+                    background: deadlinePassed ? C.redLight : C.amberLight,
+                    color: deadlinePassed ? C.red : C.amber,
+                  }}>
+                    <Icon d={ic.clock} size={10} color={deadlinePassed ? C.red : C.amber} />
+                    {daysLeft}
+                  </span>
+                )}
+              </div>
+
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: C.grey900, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                {job.title}
+              </h1>
+
+              <Link to={`/company/${job.company_id}`} style={{ fontSize: '1rem', fontWeight: 600, color: C.purple, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                <Icon d={ic.building} size={14} color={C.purple} />
+                {job.company_name}
+              </Link>
+
+              {/* Meta chips */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: '0.82rem', color: C.grey600 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon d={ic.mapPin} size={13} color={C.grey400} />
+                  {job.location}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon d={ic.dollar} size={13} color={C.grey400} />
+                  {formatSalary(job.salary)}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon d={ic.briefcase} size={13} color={C.grey400} />
+                  {job.type}
+                </span>
+                {job.experience && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon d={ic.users} size={13} color={C.grey400} />
+                    {job.experience}
+                  </span>
+                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon d={ic.calendar} size={13} color={C.grey400} />
+                  Posted {new Date(job.posted_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+
+            {/* Apply Button area */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
+              {user?.type === 'candidate' && !hasApplied && jobIsActive && (
+                <button onClick={handleApply} style={{ ...btn, background: C.purple, color: C.white, height: 48, padding: '0 28px', fontSize: '0.9rem' }}>
+                  <Icon d={ic.send} size={15} color={C.white} />
                   Apply Now
                 </button>
               )}
               {user?.type === 'candidate' && hasApplied && (
-                <>
-                  <span style={styles.appliedBadge}>✓ Applied</span>
-                  <button onClick={handleApply} style={{...styles.applyBtn, background: '#ff9800'}}>
-                    Upload Again
-                  </button>
-                </>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: C.greenLight, borderRadius: 10, color: C.green, fontWeight: 600, fontSize: '0.875rem' }}>
+                  <Icon d={ic.check} size={15} color={C.green} sw={2.5} />
+                  Applied
+                </div>
               )}
               {!user && (
-                <button onClick={handleApply} style={styles.applyBtn}>
+                <button onClick={handleApply} style={{ ...btn, background: C.purple, color: C.white, height: 48, padding: '0 28px', fontSize: '0.9rem' }}>
                   Login to Apply
                 </button>
               )}
-              <button style={styles.saveBtn}>★ Save Job</button>
+              {job.deadline && (
+                <span style={{ fontSize: '0.75rem', color: C.grey400, textAlign: 'right' }}>
+                  Deadline: {new Date(job.deadline).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div style={styles.contentGrid}>
-          {/* Main Content */}
-          <div style={styles.mainContent}>
-            {/* Job Description */}
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Job Description</h2>
-              <p style={styles.description}>{job.description}</p>
+        {/* ── Content Grid ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+
+          {/* Left: Main Content */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Description */}
+            <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.grey200}`, boxShadow: '0 2px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.5rem', borderBottom: `1px solid ${C.grey100}`, background: C.grey50 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: C.blueLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon d={ic.fileText} size={16} color={C.blue} />
+                </div>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: C.grey900 }}>Job Description</span>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                <p style={{ color: C.grey700, lineHeight: 1.9, fontSize: '0.9rem', margin: 0, whiteSpace: 'pre-line' }}>
+                  {job.description}
+                </p>
+              </div>
             </div>
 
             {/* Requirements */}
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Requirements</h2>
-              <ul style={styles.requirementsList}>
-                {job.requirements?.map((req, index) => (
-                  <li key={index} style={styles.requirementItem}>
-                    • {req}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {job.requirements && job.requirements.length > 0 && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.grey200}`, boxShadow: '0 2px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.5rem', borderBottom: `1px solid ${C.grey100}`, background: C.grey50 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: C.amberLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon d={ic.star} size={16} color={C.amber} />
+                  </div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: C.grey900 }}>Requirements</span>
+                </div>
+                <div style={{ padding: '1.5rem' }}>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {job.requirements.map((req, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.875rem', color: C.grey700 }}>
+                        <span style={{ marginTop: 3, flexShrink: 0 }}>
+                          <Icon d={ic.check} size={14} color={C.green} sw={2.5} />
+                        </span>
+                        {req}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             {/* Skills */}
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Required Skills</h2>
-              <div style={styles.skillsContainer}>
-                {job.requirements?.map((skill, index) => (
-                  <span key={index} style={styles.skillTag}>{skill}</span>
+            {job.skills && job.skills.length > 0 && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.grey200}`, boxShadow: '0 2px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.5rem', borderBottom: `1px solid ${C.grey100}`, background: C.grey50 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: C.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon d={ic.tool} size={16} color={C.purple} />
+                  </div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: C.grey900 }}>Required Skills</span>
+                </div>
+                <div style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {job.skills.map((skill, i) => (
+                      <span key={i} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '6px 14px', background: C.purpleLight,
+                        borderRadius: 999, fontSize: '0.8rem', fontWeight: 500, color: C.purple
+                      }}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Sidebar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Job Summary */}
+            <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.grey200}`, boxShadow: '0 2px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.grey100}`, background: C.grey50 }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: C.grey900 }}>Job Summary</span>
+              </div>
+              <div style={{ padding: '1.25rem 1.5rem' }}>
+                {[
+                  { icon: ic.briefcase, label: 'Position', value: job.title },
+                  { icon: ic.tag, label: 'Category', value: job.category || 'Not specified' },
+                  { icon: ic.clock, label: 'Job Type', value: job.type },
+                  { icon: ic.mapPin, label: 'Location', value: job.location },
+                  { icon: ic.users, label: 'Experience', value: job.experience || 'Not specified' },
+                  { icon: ic.dollar, label: 'Salary', value: job.salary === 'Unpaid (Volunteer/Internship)' ? 'Unpaid Position' : job.salary },
+                  { icon: ic.calendar, label: 'Posted', value: new Date(job.posted_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) },
+                  ...(job.deadline ? [{ icon: ic.calendar, label: 'Deadline', value: new Date(job.deadline).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) }] : []),
+                ].map(({ icon, label, value }, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    paddingBottom: 12, marginBottom: 12,
+                    borderBottom: i < 7 ? `1px solid ${C.grey100}` : 'none'
+                  }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: C.grey100, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <Icon d={icon} size={13} color={C.grey600} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: C.grey400, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: '0.82rem', color: C.grey900, fontWeight: 500 }}>{value}</div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Sidebar */}
-          <div style={styles.sidebar}>
-            {/* Company Info */}
-            {company && (
-              <div style={styles.companyCard}>
-                <img 
-                  src={company.logo || 'https://via.placeholder.com/120'} 
-                  alt={company.name}
-                  style={styles.companyLogoLarge}
-                />
-                <h3>{company.name}</h3>
-                <p style={{color: '#666', fontSize: '0.9rem'}}>{company.industry}</p>
-                
-                <div style={styles.companyStats}>
-                  <div style={styles.companyStat}>
-                    <div style={styles.companyStatValue}>{company.openPositions || 0}</div>
-                    <div style={styles.companyStatLabel}>Open Jobs</div>
-                  </div>
-                  <div style={styles.companyStat}>
-                    <div style={styles.companyStatValue}>{company.rating || 'New'}</div>
-                    <div style={styles.companyStatLabel}>Rating</div>
-                  </div>
-                </div>
-
-                <Link to={`/company/${company.id}`} style={styles.viewJobLink}>
-                  View Company Profile →
-                </Link>
+            {/* Apply CTA (sidebar) */}
+            {user?.type === 'candidate' && !hasApplied && jobIsActive && (
+              <button
+                onClick={handleApply}
+                style={{ ...btn, background: C.purple, color: C.white, width: '100%', height: 50, fontSize: '0.9rem' }}
+              >
+                <Icon d={ic.send} size={16} color={C.white} />
+                Apply for this Job
+              </button>
+            )}
+            {user?.type === 'candidate' && hasApplied && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', background: C.greenLight, borderRadius: 10, color: C.green, fontWeight: 700, fontSize: '0.875rem' }}>
+                <Icon d={ic.check} size={16} color={C.green} sw={2.5} />
+                You have applied
               </div>
             )}
-
-            {/* Job Summary */}
-            <div style={{marginTop: '2rem'}}>
-              <h3 style={{marginBottom: '1rem'}}>Job Summary</h3>
-              <table style={{width: '100%'}}>
-                <tbody>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Position:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.title}</td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Experience:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.experience || 'Not specified'}</td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Location:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.location}</td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Job Type:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.type}</td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Salary:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>
-                      {job.salary === 'Unpaid (Volunteer/Internship)' 
-                        ? 'Unpaid Position' 
-                        : job.salary}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Posted:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{new Date(job.postedDate).toLocaleDateString()}</td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Job Deadline:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>
-                      {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'Not specified'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{padding: '0.5rem 0', color: '#666'}}>Applicants:</td>
-                    <td style={{padding: '0.5rem 0', color: '#333'}}>{job.applicants || 0}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {!user && (
+              <button onClick={handleApply} style={{ ...btn, background: C.purple, color: C.white, width: '100%', height: 50, fontSize: '0.9rem' }}>
+                Login to Apply
+              </button>
+            )}
           </div>
         </div>
-
-        {/* Related Jobs */}
-        {relatedJobs.length > 0 && (
-          <div style={{marginTop: '3rem'}}>
-            <h2 style={styles.sectionTitle}>Similar Jobs</h2>
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem'}}>
-              {relatedJobs.map(relatedJob => (
-                <Link 
-                  key={relatedJob.id} 
-                  to={`/job/${relatedJob.id}`}
-                  style={{textDecoration: 'none'}}
-                >
-                  <div style={styles.relatedJobCard}>
-                    <h3 style={styles.relatedJobTitle}>{relatedJob.title}</h3>
-                    <p style={styles.relatedJobCompany}>{relatedJob.company}</p>
-                    <div style={styles.relatedJobMeta}>
-                      <span>📍 {relatedJob.location?.split(' ')[0] || relatedJob.location}</span>
-                      <span>
-                        {relatedJob.salary === 'Unpaid (Volunteer/Internship)' 
-                          ? 'Unpaid' 
-                          : relatedJob.salary}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </main>
 
-      {/* Apply Modal */}
+      {/* ── Apply Modal ── */}
       {showApplyModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowApplyModal(false)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>
-                {forceReupload ? 'Update Your Application' : `Apply for ${job.title}`}
-              </h2>
-              <button style={styles.closeBtn} onClick={() => setShowApplyModal(false)}>×</button>
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+          onClick={() => setShowApplyModal(false)}
+        >
+          <div
+            style={{ background: C.white, borderRadius: 16, padding: '2rem', maxWidth: 500, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Application</div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: C.grey900, margin: 0 }}>Apply for {job.title}</h2>
+              </div>
+              <button onClick={() => setShowApplyModal(false)} style={{ background: C.grey100, border: 'none', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Icon d={ic.x} size={14} color={C.grey700} />
+              </button>
             </div>
 
-            {forceReupload && (
-              <div style={styles.reuploadNote}>
-                ⚠️ You have already applied for this position. Uploading again will update your existing application.
-              </div>
-            )}
-
             <form onSubmit={handleApplicationSubmit}>
-              {/* CV Upload Section */}
-              <div style={styles.cvSection}>
-                <label style={styles.cvLabel}>
-                  {forceReupload ? 'Upload Updated CV *' : 'Upload CV *'}
+
+              {/* CV Upload */}
+              <div style={{ marginBottom: '1.25rem', padding: '1rem', background: C.grey50, borderRadius: 10, border: `1.5px dashed ${C.grey200}` }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: C.grey700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  Upload CV <span style={{ color: C.red }}>*</span>
                 </label>
-                <label style={{...styles.cvLabel, fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem'}}>
-                  (PDF, DOC, DOCX only, Max 10MB)
+                <span style={{ fontSize: '0.72rem', color: C.grey400, display: 'block', marginBottom: 10 }}>PDF, DOC, DOCX only — max 10MB</span>
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
+                  background: C.purpleLight, color: C.purple, fontWeight: 600, fontSize: '0.8rem',
+                  fontFamily: font
+                }}>
+                  <Icon d={ic.upload} size={14} color={C.purple} />
+                  Choose File
+                  <input type="file" accept=".pdf,.doc,.docx" onChange={handleCVUpload} style={{ display: 'none' }} required />
                 </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleCVUpload}
-                  style={styles.cvInput}
-                  required
-                />
                 {cvFileName && !uploadError && (
-                  <div style={styles.cvFileName}>📄 {cvFileName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: '0.8rem', color: C.green, fontWeight: 500 }}>
+                    <Icon d={ic.fileText} size={13} color={C.green} /> {cvFileName}
+                  </div>
                 )}
                 {uploadError && (
-                  <div style={styles.uploadError}>⚠️ {uploadError}</div>
-                )}
-                
-                {cvAnalyzing && (
-                  <div style={styles.cvAnalyzing}>
-                    <span>⏳ Analyzing your CV...</span>
-                  </div>
-                )}
-                
-                {cvScore !== null && !cvAnalyzing && !uploadError && (
-                  <div style={styles.cvScoreDisplay}>
-                    
-                    <div style={styles.scoreDetail}>
-                      {cvScore >= 50 
-                        ? 'You are eligible for the interview process.'
-                        : 'Your CV does not meet the minimum requirements for an interview.'}
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: '0.8rem', color: C.red }}>
+                    <Icon d={ic.alert} size={13} color={C.red} /> {uploadError}
                   </div>
                 )}
               </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Cover Letter (Optional)</label>
+              {/* Cover Letter */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: C.grey700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                  Cover Letter <span style={{ fontSize: '0.7rem', color: C.grey400, textTransform: 'none', fontWeight: 400 }}>(Optional)</span>
+                </label>
                 <textarea
-                  style={styles.textarea}
-                  placeholder="Write a brief cover letter explaining why you're a good fit..."
+                  style={{ ...inputBase, minHeight: 120, resize: 'vertical' }}
+                  placeholder="Tell the employer why you're the right fit..."
                   value={applicationData.coverLetter}
-                  onChange={(e) => setApplicationData({coverLetter: e.target.value})}
+                  onChange={(e) => setApplicationData({ coverLetter: e.target.value })}
+                  onFocus={(e) => e.target.style.borderColor = C.purple}
+                  onBlur={(e) => e.target.style.borderColor = C.grey200}
                 />
               </div>
 
-              <div style={styles.modalActions}>
-                <button 
-                  type="submit" 
-                  style={styles.submitBtn}
-                  disabled={!cvFile || cvAnalyzing || uploadError}
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="submit"
+                  disabled={!cvFile || !!uploadError || submitting}
+                  style={{
+                    ...btn, flex: 1, height: 48,
+                    background: (!cvFile || uploadError || submitting) ? C.grey200 : C.purple,
+                    color: (!cvFile || uploadError || submitting) ? C.grey400 : C.white,
+                    cursor: (!cvFile || uploadError || submitting) ? 'not-allowed' : 'pointer',
+                  }}
                 >
-                  {forceReupload ? 'Update Application' : 'Submit Application'}
+                  {submitting
+                    ? <><div style={{ animation: 'spin 1s linear infinite' }}><Icon d={ic.loader} size={14} color={C.grey400} /></div> Submitting...</>
+                    : <><Icon d={ic.send} size={14} color={!cvFile || uploadError ? C.grey400 : C.white} /> Submit Application</>
+                  }
                 </button>
-                <button 
-                  type="button" 
-                  style={styles.cancelBtn}
+                <button
+                  type="button"
                   onClick={() => setShowApplyModal(false)}
+                  style={{ ...btn, background: C.white, color: C.grey700, border: `1.5px solid ${C.grey200}` }}
                 >
                   Cancel
                 </button>
@@ -1094,6 +674,15 @@ const JobDetails = () => {
       )}
 
       <Footer />
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes slideIn { from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+        * { box-sizing: border-box; }
+        button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(0.95); }
+        a:hover { opacity: 0.85; }
+      `}</style>
     </div>
   );
 };
