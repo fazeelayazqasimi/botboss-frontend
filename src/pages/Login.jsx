@@ -299,7 +299,7 @@ const Login = () => {
               <div className="form-container slide-in">
                 <button className="back-btn" onClick={handleBackToType}>
                   <svg viewBox="0 0 24 24" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                  Back to type selection
+                  Back to type selection !
                 </button>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
