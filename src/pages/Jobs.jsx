@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import JobCard from '../components/JobCard';
-import { getJobs } from '../components/data/storage'; // Import API function
+import { getJobs } from '../components/data/storage';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
