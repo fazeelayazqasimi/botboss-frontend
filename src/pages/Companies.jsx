@@ -4,6 +4,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CompanyCard from '../components/CompanyCard';
 
+const API_URL = 'https://fazeelayazqasimi-botboss-updated-backend.hf.space';
+
 const Companies = () => {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
@@ -15,35 +17,72 @@ const Companies = () => {
   useEffect(() => { loadCompanies(); }, []);
   useEffect(() => { applyFilters(); }, [filters, companies]);
 
-  const loadCompanies = () => {
-    const data = JSON.parse(localStorage.getItem('companies') || '[]');
-    setCompanies(data);
-    setFilteredCompanies(data);
-    setIndustries([...new Set(data.map(c => c.industry).filter(Boolean))]);
-    setLocations([...new Set(data.map(c => c.location).filter(Boolean))]);
-    setLoading(false);
+  const loadCompanies = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/companies/`);
+      if (!response.ok) throw new Error('Failed to fetch companies');
+      const data = await response.json();
+      setCompanies(data);
+      setFilteredCompanies(data);
+      
+      // Extract unique industries and locations
+      const uniqueIndustries = [...new Set(data.map(c => c.industry).filter(Boolean))];
+      const uniqueLocations = [...new Set(data.map(c => c.location).filter(Boolean))];
+      setIndustries(uniqueIndustries);
+      setLocations(uniqueLocations);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      setCompanies([]);
+      setFilteredCompanies([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const applyFilters = () => {
-    let f = [...companies];
-    if (filters.search) f = f.filter(c => c.name.toLowerCase().includes(filters.search.toLowerCase()) || c.description?.toLowerCase().includes(filters.search.toLowerCase()));
-    if (filters.industry) f = f.filter(c => c.industry === filters.industry);
-    if (filters.location) f = f.filter(c => c.location === filters.location);
-    setFilteredCompanies(f);
+    let filtered = [...companies];
+    if (filters.search) {
+      filtered = filtered.filter(c => 
+        c.name?.toLowerCase().includes(filters.search.toLowerCase()) || 
+        c.description?.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
+    if (filters.industry) {
+      filtered = filtered.filter(c => c.industry === filters.industry);
+    }
+    if (filters.location) {
+      filtered = filtered.filter(c => c.location === filters.location);
+    }
+    setFilteredCompanies(filtered);
   };
 
-  const handleFilterChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
-  const clearFilters = () => setFilters({ search: '', industry: '', location: '' });
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', industry: '', location: '' });
+  };
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  
+  // Calculate stats from companies data
+  const totalCompanies = companies.length;
   const totalOpenings = companies.reduce((sum, c) => sum + (c.openPositions || 0), 0);
-  const avgRating = companies.length ? (companies.reduce((sum, c) => sum + (c.rating || 0), 0) / companies.length).toFixed(1) : '—';
+  const avgRating = companies.length 
+    ? (companies.reduce((sum, c) => sum + (c.rating || 0), 0) / companies.length).toFixed(1) 
+    : '—';
+  const totalLocations = locations.length;
 
   if (loading) {
     return (
       <div className="co-root">
         <Navbar />
-        <div className="co-loading"><div className="co-spinner" /><p>Loading companies...</p></div>
+        <div className="co-loading">
+          <div className="co-spinner" />
+          <p>Loading companies...</p>
+        </div>
         <Footer />
       </div>
     );
@@ -226,7 +265,7 @@ const Companies = () => {
               <svg viewBox="0 0 24 24" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </div>
             <div>
-              <div className="co-stat-num">{companies.length}</div>
+              <div className="co-stat-num">{totalCompanies}</div>
               <div className="co-stat-label">Companies</div>
             </div>
           </div>
@@ -253,7 +292,7 @@ const Companies = () => {
               <svg viewBox="0 0 24 24" strokeWidth="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
             </div>
             <div>
-              <div className="co-stat-num">{locations.length}</div>
+              <div className="co-stat-num">{totalLocations}</div>
               <div className="co-stat-label">Locations</div>
             </div>
           </div>
@@ -272,7 +311,8 @@ const Companies = () => {
               <div className="co-filter-group">
                 <label className="co-filter-label">Search</label>
                 <input
-                  type="text" name="search"
+                  type="text"
+                  name="search"
                   placeholder="Company name..."
                   value={filters.search}
                   onChange={handleFilterChange}
@@ -281,19 +321,35 @@ const Companies = () => {
               </div>
               <div className="co-filter-group">
                 <label className="co-filter-label">Industry</label>
-                <select name="industry" value={filters.industry} onChange={handleFilterChange} className="co-filter-select">
+                <select
+                  name="industry"
+                  value={filters.industry}
+                  onChange={handleFilterChange}
+                  className="co-filter-select"
+                >
                   <option value="">All Industries</option>
-                  {industries.map((ind, i) => <option key={i} value={ind}>{ind}</option>)}
+                  {industries.map((ind, i) => (
+                    <option key={i} value={ind}>{ind}</option>
+                  ))}
                 </select>
               </div>
               <div className="co-filter-group">
                 <label className="co-filter-label">Location</label>
-                <select name="location" value={filters.location} onChange={handleFilterChange} className="co-filter-select">
+                <select
+                  name="location"
+                  value={filters.location}
+                  onChange={handleFilterChange}
+                  className="co-filter-select"
+                >
                   <option value="">All Locations</option>
-                  {locations.map((loc, i) => <option key={i} value={loc}>{loc}</option>)}
+                  {locations.map((loc, i) => (
+                    <option key={i} value={loc}>{loc}</option>
+                  ))}
                 </select>
               </div>
-              <button className="co-clear-btn" onClick={clearFilters}>Clear Filters</button>
+              <button className="co-clear-btn" onClick={clearFilters}>
+                Clear Filters
+              </button>
             </div>
           </div>
 
@@ -306,15 +362,24 @@ const Companies = () => {
 
           {filteredCompanies.length > 0 ? (
             <div className="co-grid">
-              {filteredCompanies.map(company => <CompanyCard key={company.id} company={company} />)}
+              {filteredCompanies.map(company => (
+                <CompanyCard key={company.id} company={company} />
+              ))}
             </div>
           ) : (
             <div className="co-empty">
               <div className="co-empty-icon">
-                <svg viewBox="0 0 24 24" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <svg viewBox="0 0 24 24" strokeWidth="1.5">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
               </div>
               <h3>No companies found</h3>
-              <p>{activeFilterCount > 0 ? 'Try adjusting your filters.' : 'No companies have registered yet.'}</p>
+              <p>
+                {activeFilterCount > 0 
+                  ? 'Try adjusting your filters.' 
+                  : 'No companies have registered yet.'}
+              </p>
             </div>
           )}
         </div>
