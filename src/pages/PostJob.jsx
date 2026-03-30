@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { getJobs } from '../data/storage';
-
+import { saveJob, getCompanyByUserId } from '../data/storage';
 // Icons Component
 const Icon = ({ d, size = 16, color = 'currentColor', sw = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
