@@ -84,7 +84,7 @@ const JobDetails = () => {
         
         // Show message based on auto-status
         if (data.status === 'shortlisted') {
-          alert(`✅ Great news! Your application has been shortlisted based on your CV match (${data.cv_score}%). You can now give the interview.`);
+          alert(`✅ Great news! Your application has been shortlisted based on your CV match . You can now give the interview.`);
         } else {
           alert(`📝 Application submitted successfully! The company will review your application.`);
         }
