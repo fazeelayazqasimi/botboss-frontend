@@ -263,10 +263,10 @@ const CompanyDashboard = () => {
               Post New Job
             </Link>
             <Link to="/company/cv-viewer"
-              style={{ ...btn, background:C.grey100, color:C.grey700, border:`1px solid ${C.grey200}` }}>
-              <Icon d={ic.fileText} size={14} color={C.grey700} />
-              View All CVs
-            </Link>
+    style={{ ...btn, background:C.grey100, color:C.grey700, border:`1px solid ${C.grey200}` }}>
+    <Icon d={ic.fileText} size={14} color={C.grey700} />
+    View All CVs
+  </Link>
           </div>
         </div>
 
