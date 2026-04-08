@@ -28,6 +28,7 @@ const MyApplications = () => {
 
   const loadAll = async (userData) => {
     try {
+      // Get applications only for this specific candidate
       const apps = await getApplicationsByCandidate(userData.id);
       setApplications(apps);
 
@@ -43,6 +44,7 @@ const MyApplications = () => {
       );
       setJobs(jobMap);
 
+      // Filter interviews to only those belonging to this candidate's applications
       const allInterviews = JSON.parse(localStorage.getItem('interviews') || '[]');
       const myInterviews = allInterviews.filter(i =>
         apps.some(a => a.id === i.applicationId || a.job_id === i.jobId)
@@ -382,9 +384,110 @@ const MyApplications = () => {
           to { transform: rotate(360deg); }
         }
         
+        /* Responsive Styles */
+        @media (max-width: 1024px) {
+          .ma-stats {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+        
         @media (max-width: 768px) {
+          .ma-container {
+            padding: 1rem;
+          }
+          
+          .ma-hero {
+            padding: 1.5rem;
+            border-radius: 20px;
+          }
+          
+          .ma-hero h1 {
+            font-size: 1.4rem;
+          }
+          
+          .ma-hero p {
+            font-size: 0.8rem;
+          }
+          
           .ma-stats {
             grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+          }
+          
+          .ma-stat-card {
+            padding: 0.75rem;
+          }
+          
+          .ma-stat-value {
+            font-size: 1.2rem;
+          }
+          
+          .ma-stat-label {
+            font-size: 0.65rem;
+          }
+          
+          .ma-tabs {
+            gap: 0.4rem;
+          }
+          
+          .ma-tab {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.7rem;
+          }
+          
+          .ma-card-header {
+            padding: 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          
+          .ma-card-body {
+            padding: 1rem;
+          }
+          
+          .ma-job-title {
+            font-size: 0.9rem;
+          }
+          
+          .ma-meta {
+            gap: 0.5rem;
+          }
+          
+          .ma-meta-item {
+            font-size: 0.7rem;
+          }
+          
+          .ma-cover-letter {
+            font-size: 0.75rem;
+            padding: 0.6rem 0.8rem;
+          }
+          
+          .ma-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.7rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .ma-stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .ma-hero h1 {
+            font-size: 1.2rem;
+          }
+          
+          .ma-actions {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          
+          .ma-btn {
+            justify-content: center;
+          }
+          
+          .ma-card-header .ma-badge {
+            align-self: flex-start;
           }
         }
       `}</style>
@@ -453,20 +556,20 @@ const MyApplications = () => {
                 <div className="ma-card-body">
                   <div className="ma-meta">
                     <span className="ma-meta-item">
-                      📅 Applied: {new Date(app.applied_at).toLocaleDateString()}
+                      Applied: {new Date(app.applied_at).toLocaleDateString()}
                     </span>
                     {job?.location && (
-                      <span className="ma-meta-item">📍 {job.location}</span>
+                      <span className="ma-meta-item">Location: {job.location}</span>
                     )}
                     {job?.type && (
-                      <span className="ma-meta-item">⏰ {job.type}</span>
+                      <span className="ma-meta-item">Type: {job.type}</span>
                     )}
                   </div>
                   
                   {/* Show auto-shortlist badge for candidates */}
                   {app.status === 'shortlisted' && app.cv_score >= 50 && (
                     <div className="ma-auto-badge">
-                      ✨ Auto-shortlisted based on CV match ({app.cv_score}%)
+                      Auto-shortlisted based on CV match ({app.cv_score}%)
                     </div>
                   )}
                   
@@ -479,19 +582,19 @@ const MyApplications = () => {
                   <div className="ma-actions">
                     {app.status === 'shortlisted' && (
                       <Link to={`/interview/${app.job_id}`} state={{ applicationId: app.id }} className="ma-btn ma-btn-primary">
-                        🎤 Give Interview
+                        Give Interview
                       </Link>
                     )}
                     
                     {app.status === 'interview_scheduled' && (
                       <Link to={`/interview/${app.job_id}`} state={{ applicationId: app.id }} className="ma-btn ma-btn-primary">
-                        🎥 Join Interview
+                        Join Interview
                       </Link>
                     )}
                     
                     {job && (
                       <Link to={`/job/${app.job_id}`} className="ma-btn ma-btn-outline">
-                        👁️ View Job
+                        View Job
                       </Link>
                     )}
                   </div>
